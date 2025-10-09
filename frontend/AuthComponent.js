@@ -34,4 +34,6 @@ function AuthComponent() {
   );
 }
 
-export default AuthComponent;
+
+
+
