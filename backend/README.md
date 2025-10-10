@@ -25,3 +25,18 @@ Manual reminder trigger (for testing): POST /api/products/trigger-reminders (no 
 Notes:
 - Ensure nodemailer SMTP settings are correct. For development consider using Ethereal (ethereal.email) or Mailtrap.
 - The scheduler marks products with lastReminderSent so duplicates are avoided.
+
+Quick test reminders:
+- To test notifications quickly, set `TEST_REMINDER_MINUTES=1` in your `.env` file. When you create a product, the server will set an internal `testReminderAt` to now + 1 minute. The scheduler (or manual trigger) will then send the reminder and emit a realtime event when due.
+- Workflow to test:
+	1. Set `TEST_REMINDER_MINUTES=1` in `backend/.env`.
+	2. Start backend and frontend.
+	3. Login from the frontend Dashboard and add a product (expiryDate can be any future date).
+	4. Wait ~1 minute, or run the manual trigger endpoint repeatedly until the test reminder is sent:
+
+```powershell
+curl -Method POST http://localhost:5000/api/products/trigger-reminders
+```
+
+	5. Watch the Dashboard Notifications area — you should see the reminder appear in real time when it's sent.
+

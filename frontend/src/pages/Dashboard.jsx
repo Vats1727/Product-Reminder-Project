@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { io } from "socket.io-client";
 import ProductList from "./ProductList.jsx";
 import AddProduct from "./AddProduct.jsx";
 
@@ -8,6 +9,7 @@ const Dashboard = ({ onLogout }) => {
   const [message, setMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const fetchUser = async () => {
     try {
@@ -22,6 +24,19 @@ const Dashboard = ({ onLogout }) => {
 
   useEffect(() => {
     fetchUser();
+  }, []);
+
+  useEffect(() => {
+    // connect to socket.io server
+    // In Vite use import.meta.env for environment variables in the browser
+    const apiUrl = (import.meta.env && import.meta.env.VITE_API_URL) || "http://localhost:5000";
+    const socket = io(apiUrl);
+    socket.on("connect", () => console.log("socket connected", socket.id));
+    socket.on("reminder", (payload) => {
+      console.log("received reminder", payload);
+      setNotifications((n) => [payload, ...n]);
+    });
+    return () => socket.disconnect();
   }, []);
 
   const handleCreated = () => {
@@ -55,6 +70,18 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {adding && <AddProduct onCreated={handleCreated} />}
+
+      <div style={{ marginTop: "16px" }}>
+        <h3>Notifications</h3>
+        {notifications.length === 0 && <p>No notifications yet</p>}
+        <ul>
+          {notifications.map((note, idx) => (
+            <li key={idx} style={{ borderBottom: "1px solid #eee", padding: "8px 0" }}>
+              <strong>{note.product}</strong> will expire on {new Date(note.expiryDate).toLocaleDateString()} — Sent to {note.to}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       <ProductList refreshKey={refreshKey} />
     </div>
