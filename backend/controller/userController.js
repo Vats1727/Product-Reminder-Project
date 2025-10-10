@@ -1,5 +1,6 @@
 import User from "../model/User.js";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs"; 
 
 export const registerUser = async (req, res) => {
   try {
@@ -45,6 +46,51 @@ export const registerUser = async (req, res) => {
 
   } catch (err) {
     console.error("Signup error",err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password)
+      return res.status(400).json({ message: "Email and password are required" });
+
+    // check if user exists
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    // check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+
+    // generate JWT token
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(200).json({
+      message: "Login successful",
+      token,
+      user: { fullName: user.fullName, email: user.email, phone: user.phone }
+    });
+
+  } catch (err) {
+    console.error("Login Error:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const getCurrentUser = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const user = await User.findById(userId).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ fullName: user.fullName, email: user.email, phone: user.phone, createdAt: user.createdAt });
+  } catch (err) {
+    console.error("Get current user error:", err);
     res.status(500).json({ message: err.message });
   }
 };

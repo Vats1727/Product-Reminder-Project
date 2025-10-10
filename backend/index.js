@@ -3,6 +3,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
+import productRoutes from "./routes/productRoutes.js";
+import { checkAndSendReminders } from "./controller/productController.js";
+import cron from "node-cron";
 
 dotenv.config();
 
@@ -15,6 +18,13 @@ app.use(express.json());
 
 // Routes
 app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+
+// Schedule reminder checks once a day at 08:00 server time
+cron.schedule("0 8 * * *", async () => {
+	console.log("Running scheduled reminder check");
+	await checkAndSendReminders();
+});
