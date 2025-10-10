@@ -1,0 +1,50 @@
+import User from "../model/User.js";
+import jwt from "jsonwebtoken";
+
+export const registerUser = async (req, res) => {
+  try {
+    const { fullName, email, phone, password, confirmPassword } = req.body;
+
+    // Check all fields
+    if (!fullName || !email || !phone || !password || !confirmPassword)
+      return res.status(400).json({ message: "All fields are required" });
+
+    // Full Name validation
+    if (!/^[a-zA-Z ]{3,}$/.test(fullName))
+      return res.status(400).json({ message: "Full Name must be at least 3 letters and contain only letters" });
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email))
+      return res.status(400).json({ message: "Invalid email format" });
+
+    // Phone validation (10 digits)
+    if (!/^\d{10}$/.test(phone))
+      return res.status(400).json({ message: "Phone number must be 10 digits" });
+
+    // Password validation (min 6 chars, at least 1 number)
+    if (!/^(?=.*\d).{6,}$/.test(password))
+      return res.status(400).json({ message: "Password must be at least 6 characters and contain a number" });
+
+    // Confirm password
+    if (password !== confirmPassword)
+      return res.status(400).json({ message: "Passwords do not match" });
+
+    // Check if user exists
+    const userExists = await User.findOne({ email });
+    if (userExists) return res.status(400).json({ message: "User already exists" });
+
+    const user = await User.create({ fullName, email, phone, password });
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    res.status(201).json({
+      message: "User registered successfully",
+      token,
+      user: { fullName, email, phone }
+    });
+
+  } catch (err) {
+    console.error("Signup error",err);
+    res.status(500).json({ message: err.message });
+  }
+};
