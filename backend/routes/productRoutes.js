@@ -1,5 +1,5 @@
 import express from "express";
-import { createProduct, listProducts, checkAndSendReminders } from "../controller/productController.js";
+import { createProduct, listProducts, checkAndSendReminders, updateProduct, deleteProduct } from "../controller/productController.js";
 import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -7,6 +7,8 @@ const router = express.Router();
 // create and list products
 router.post("/", authMiddleware, createProduct);
 router.get("/", authMiddleware, listProducts);
+router.put("/:id", authMiddleware, updateProduct);
+router.delete("/:id", authMiddleware, deleteProduct);
 
 // get due reminders for current user
 router.get("/due", authMiddleware, async (req, res) => {

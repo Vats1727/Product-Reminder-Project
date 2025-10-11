@@ -57,7 +57,21 @@ export const loginUser = async (req, res) => {
     if (!email || !password)
       return res.status(400).json({ message: "Email and password are required" });
 
-    // check if user exists
+    // First check for env-based admin credentials (allow admin login without DB user)
+    const envAdminEmail = process.env.ADMIN_EMAIL;
+    const envAdminPass = process.env.ADMIN_PASSWORD;
+    if (envAdminEmail && envAdminPass && email === envAdminEmail && password === envAdminPass) {
+      // issue an admin token (no DB lookup required)
+      const tokenPayload = { isAdmin: true, email: envAdminEmail };
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "7d" });
+      return res.status(200).json({
+        message: "Login successful",
+        token,
+        user: { fullName: 'Admin', email: envAdminEmail, phone: '', role: 'admin' }
+      });
+    }
+
+    // check if user exists in DB
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -65,13 +79,16 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-    // generate JWT token
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+    // generate JWT token and include isAdmin if user.role === 'admin'
+    const tokenPayload = { id: user._id };
+    if (user.role === 'admin') tokenPayload.isAdmin = true;
+
+    const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "7d" });
 
     res.status(200).json({
       message: "Login successful",
       token,
-      user: { fullName: user.fullName, email: user.email, phone: user.phone }
+      user: { fullName: user.fullName, email: user.email, phone: user.phone, role: user.role }
     });
 
   } catch (err) {
@@ -82,13 +99,19 @@ export const loginUser = async (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
+    // If token included isAdmin (env-based admin login without DB id)
+    if (req.user && req.user.isAdmin && !req.user.id) {
+      // return admin summary from token (email may be present)
+      return res.json({ fullName: 'Admin', email: req.user.email || process.env.ADMIN_EMAIL, phone: '', createdAt: null, role: 'admin', isAdmin: true });
+    }
+
     const userId = req.userId;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
     const user = await User.findById(userId).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.json({ fullName: user.fullName, email: user.email, phone: user.phone, createdAt: user.createdAt });
+    res.json({ fullName: user.fullName, email: user.email, phone: user.phone, createdAt: user.createdAt, role: user.role || 'user', isAdmin: user.role === 'admin' });
   } catch (err) {
     console.error("Get current user error:", err);
     res.status(500).json({ message: err.message });

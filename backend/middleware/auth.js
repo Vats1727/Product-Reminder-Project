@@ -7,7 +7,9 @@ export const authMiddleware = (req, res, next) => {
   const token = authHeader.split(" ")[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.id;
+    // attach full decoded payload for admin tokens
+    req.user = decoded;
+    req.userId = decoded.id || null;
     next();
   } catch (err) {
     return res.status(401).json({ message: "Invalid token" });

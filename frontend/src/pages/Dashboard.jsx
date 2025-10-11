@@ -3,19 +3,28 @@ import axios from "axios";
 import { io } from "socket.io-client";
 import ProductList from "./ProductList.jsx";
 import AddProduct from "./AddProduct.jsx";
+import AdminPanel from "./AdminPanel.jsx";
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
   const [message, setMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(false);
   const [dueReminders, setDueReminders] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
+  const apiUrl = (import.meta.env && import.meta.env.VITE_API_URL) || "http://localhost:5000";
 
   const fetchUser = async () => {
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/users/me", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${apiUrl}/api/users/me`, { headers: { Authorization: `Bearer ${token}` } });
       setUser(res.data);
+      // auto-open admin panel if user is admin
+      if (res.data && (res.data.isAdmin || res.data.role === 'admin')) {
+        setShowAdmin(true);
+      }
     } catch (err) {
       console.error(err);
       setMessage(err.response?.data?.message || "Could not fetch user");
@@ -24,22 +33,21 @@ const Dashboard = ({ onLogout }) => {
 
   useEffect(() => {
     fetchUser();
-    // request notification permission once
+    // request notification permission
     if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
       Notification.requestPermission().then(() => {});
     }
 
     let mounted = true;
-
     const fetchDue = async () => {
       try {
         const token = localStorage.getItem('token');
-        const res = await fetch('http://localhost:5000/api/products/due', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${apiUrl}/api/products/due`, { headers: { Authorization: `Bearer ${token}` } });
         if (!mounted) return;
         if (res.ok) {
           const data = await res.json();
           setDueReminders(data);
-          // show notifications for new items
+          // show browser notifications for new due reminders
           try {
             const shown = JSON.parse(localStorage.getItem('shownReminders') || '[]');
             const newOnes = data.filter(d => !shown.includes(d._id));
@@ -62,50 +70,99 @@ const Dashboard = ({ onLogout }) => {
     return () => { mounted = false; clearInterval(interval); };
   }, []);
 
+  // Socket.IO connection for realtime reminders
+  useEffect(() => {
+    const socket = io(apiUrl);
+    socket.on('connect', () => console.log('socket connected', socket.id));
+    socket.on('reminder', (payload) => {
+      setNotifications(n => [payload, ...n]);
+      try {
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+          new Notification('Reminder', { body: `${payload.product} expires on ${new Date(payload.expiryDate).toLocaleDateString()}` });
+        }
+      } catch (e) { /* ignore */ }
+    });
+    return () => socket.disconnect();
+  }, []);
+
   const handleCreated = () => {
-    // refresh products list and show it
-    setRefreshKey((k) => k + 1);
+    setRefreshKey(k => k + 1);
     setAdding(false);
   };
 
   return (
-    <div style={{ maxWidth: "900px", margin: "20px auto", fontFamily: "Arial" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>Dashboard</h2>
-        <div>
-          <button onClick={() => setAdding((a) => !a)} style={{ marginRight: "8px" }}>{adding ? "Close" : "Add Product"}</button>
-          <button onClick={() => { localStorage.removeItem('token'); if (onLogout) onLogout(); }}>Logout</button>
+    <div className="app-center">
+      <div className="card" style={{width:'100%'}}>
+        <div className="topbar" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+          <h2>Dashboard</h2>
+          <div className="header-actions">
+            {user && user.role === 'admin' && (
+              <button onClick={() => setShowAdmin(s => !s)} className="btn" style={{marginRight:8}}>{showAdmin ? 'Close Admin' : 'Admin Panel'}</button>
+            )}
+            <button onClick={() => setAdding(a => !a)} className="btn" style={{marginRight:8}}>{adding ? 'Close' : 'Add Product'}</button>
+            <button onClick={() => { localStorage.removeItem('token'); if (onLogout) onLogout(); }} className="btn ghost">Logout</button>
+          </div>
+        </div>
+
+        {message && <p className="muted">{message}</p>}
+
+        <div className="dash-grid">
+          <aside className="sidebar">
+            {user ? (
+              <div className="panel user-info">
+                <h3>User Details</h3>
+                <p><strong>Name:</strong> {user.fullName}</p>
+                <p><strong>Email:</strong> {user.email}</p>
+                <p><strong>Phone:</strong> {user.phone}</p>
+              </div>
+            ) : (
+              <div className="panel">Loading user...</div>
+            )}
+
+            {dueReminders.length > 0 && (
+              <div className="panel" style={{marginTop:12}}>
+                <h4>Due reminders</h4>
+                <ul className="notify-list">
+                  {dueReminders.map(d => (
+                    <li key={d._id} className="notify-item">{d.name} — expires {new Date(d.expiryDate).toLocaleDateString()}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </aside>
+
+          <main className="main-col">
+            {showAdmin ? (
+              <AdminPanel onClose={() => setShowAdmin(false)} />
+            ) : (
+            <>
+            <div className="panel" style={{marginBottom:12}}>
+              <h4>Notifications</h4>
+              {notifications.length === 0 ? (
+                <p className="muted">No realtime notifications yet.</p>
+              ) : (
+                <ul className="notify-list">
+                  {notifications.map((n, i) => (
+                    <li key={i} className="notify-item">{n.product} — sent to {n.to}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {adding && (
+              <div className="panel" style={{marginBottom:12}}>
+                <h4>Add product</h4>
+                <AddProduct onCreated={handleCreated} />
+              </div>
+            )}
+
+            <h3 style={{marginTop:16}}>Your Products</h3>
+            <ProductList refreshKey={refreshKey} />
+            </>
+            )}
+          </main>
         </div>
       </div>
-
-      {message && <p>{message}</p>}
-
-      {user ? (
-        <div style={{ border: "1px solid #eee", padding: "12px", borderRadius: "6px", marginBottom: "16px" }}>
-          <h3>User Details</h3>
-          <p><strong>Name:</strong> {user.fullName}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Phone:</strong> {user.phone}</p>
-          <p><strong>Joined:</strong> {new Date(user.createdAt).toLocaleDateString()}</p>
-        </div>
-      ) : (
-        <p>Loading user...</p>
-      )}
-
-      {adding && <AddProduct onCreated={handleCreated} />}
-
-      {dueReminders.length > 0 && (
-        <div style={{ background: '#fff3cd', padding: '12px', border: '1px solid #ffeeba', marginBottom: '16px' }}>
-          <h4>Due reminders</h4>
-          <ul>
-            {dueReminders.map(d => (
-              <li key={d._id}>{d.name} — expires {new Date(d.expiryDate).toLocaleDateString()}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <ProductList refreshKey={refreshKey} />
     </div>
   );
 };

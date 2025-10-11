@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 
-function Signup({ onSignupSuccess }) {
+function Signup({ onSignupSuccess, goToLogin }) {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -50,66 +50,49 @@ function Signup({ onSignupSuccess }) {
   };
 
   return (
-    <div style={styles.container}>
-      <h2>Signup</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          name="fullName"
-          placeholder="Full Name"
-          value={formData.fullName}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        {errors.fullName && <small style={styles.error}>{errors.fullName}</small>}
+    <div style={{display:'flex',justifyContent:'center',padding:24}}>
+      <div className="card" style={{maxWidth:920,width:'100%'}}>
+        <div className="auth-grid">
+          <div className="auth-panel" style={{padding:28}}>
+            <div className="brand"><h1>Product Reminder</h1></div>
+            <p className="muted">Create your account to receive product expiry reminders by email.</p>
+          </div>
+          <div className="auth-panel">
+            <h2>Sign up</h2>
+            <form onSubmit={handleSubmit} className="form">
+              <label>Full name</label>
+              <input name="fullName" placeholder="Full Name" value={formData.fullName} onChange={handleChange} className="input-full" required />
+              {errors.fullName && <small className="muted" style={{color:'var(--danger)'}}>{errors.fullName}</small>}
 
-        <input
-          name="email"
-          type="email"
-          placeholder="Mail ID"
-          value={formData.email}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        {errors.email && <small style={styles.error}>{errors.email}</small>}
+              <label>Email</label>
+              <input name="email" type="email" placeholder="Mail ID" value={formData.email} onChange={handleChange} className="input-full" required />
+              {errors.email && <small className="muted" style={{color:'var(--danger)'}}>{errors.email}</small>}
 
-        <input
-          name="phone"
-          type="text"
-          placeholder="Phone Number"
-          value={formData.phone}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        {errors.phone && <small style={styles.error}>{errors.phone}</small>}
+              <label>Phone</label>
+              <input name="phone" type="text" placeholder="Phone Number" value={formData.phone} onChange={handleChange} className="input-full" required />
+              {errors.phone && <small className="muted" style={{color:'var(--danger)'}}>{errors.phone}</small>}
 
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        {errors.password && <small style={styles.error}>{errors.password}</small>}
+              <label>Password</label>
+              <input name="password" type="password" placeholder="Password" value={formData.password} onChange={handleChange} className="input-full" required />
+              {errors.password && <small className="muted" style={{color:'var(--danger)'}}>{errors.password}</small>}
 
-        <input
-          name="confirmPassword"
-          type="password"
-          placeholder="Confirm Password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          style={styles.input}
-          required
-        />
-        {errors.confirmPassword && <small style={styles.error}>{errors.confirmPassword}</small>}
+              <label>Confirm</label>
+              <input name="confirmPassword" type="password" placeholder="Confirm Password" value={formData.confirmPassword} onChange={handleChange} className="input-full" required />
+              {errors.confirmPassword && <small className="muted" style={{color:'var(--danger)'}}>{errors.confirmPassword}</small>}
 
-        <button type="submit" style={styles.button}>Register</button>
-      </form>
-      {message && <p>{message}</p>}
+                <div style={{marginTop:12,display:'flex',justifyContent:'flex-start',gap:8,alignItems:'center'}}>
+                  <button type="submit" className="btn">Create account</button>
+                </div>
+            </form>
+            {message && <p className="muted" style={{marginTop:8}}>{message}</p>}
+            <div style={{marginTop:10}}>
+              {typeof goToLogin === 'function' ? (
+                <button className="btn ghost" onClick={() => goToLogin()}>Go to Login</button>
+              ) : null}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

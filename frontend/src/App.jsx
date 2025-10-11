@@ -12,23 +12,10 @@ function App() {
 
   return (
     <div>
-      <div style={{ textAlign: "center", marginTop: "20px" }}>
-        {page === "login" && (
-          <button onClick={() => setPage("signup")} style={styles.navBtn}>
-            Go to Signup
-          </button>
-        )}
-        {page === "signup" && (
-          <button onClick={() => setPage("login")} style={styles.navBtn}>
-            Go to Login
-          </button>
-        )}
-      </div>
-
       {page === "signup" ? (
-        <Signup onSignupSuccess={() => setPage("login")} />
+        <Signup onSignupSuccess={() => setPage("login")} goToLogin={() => setPage('login')} />
       ) : page === "login" ? (
-        <Login onLoginSuccess={() => setPage("dashboard")} />
+        <Login onLoginSuccess={() => setPage("dashboard")} goToSignup={() => setPage('signup')} />
       ) : page === "dashboard" ? (
         <Dashboard onLogout={() => setPage("login")} />
       ) : null}

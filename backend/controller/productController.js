@@ -8,17 +8,24 @@ const testTimeouts = new Map();
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, purchaseDate, expiryDate, reminderDaysBefore } = req.body;
+    const { name, description, price, purchaseDate, expiryDate, reminderDaysBefore } = req.body;
     const userId = req.userId; // assume middleware sets this from JWT
 
     if (!name || !purchaseDate || !expiryDate) {
       return res.status(400).json({ message: "name, purchaseDate and expiryDate are required" });
     }
 
+    if (price === undefined || price === null || price === '') {
+      return res.status(400).json({ message: "price is required" });
+    }
+    const priceNum = Number(price);
+    if (Number.isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: "price must be a non-negative number" });
+
     const productData = {
       user: userId,
       name,
       description,
+      price: priceNum,
       purchaseDate: new Date(purchaseDate),
       expiryDate: new Date(expiryDate),
       reminderDaysBefore: reminderDaysBefore || 15,
@@ -70,6 +77,54 @@ export const listProducts = async (req, res) => {
     res.json(products);
   } catch (err) {
     console.error(err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const updateProduct = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const { name, description, price, purchaseDate, expiryDate, reminderDaysBefore } = req.body;
+
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (product.user.toString() !== userId) return res.status(403).json({ message: 'Forbidden' });
+
+    if (name !== undefined) product.name = name;
+    if (description !== undefined) product.description = description;
+    if (price !== undefined) product.price = Number(price);
+    if (purchaseDate !== undefined) product.purchaseDate = new Date(purchaseDate);
+    if (expiryDate !== undefined) product.expiryDate = new Date(expiryDate);
+    if (reminderDaysBefore !== undefined) product.reminderDaysBefore = reminderDaysBefore;
+
+    await product.save();
+    res.json({ message: 'Product updated', product });
+  } catch (err) {
+    console.error('updateProduct error', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+export const deleteProduct = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const { id } = req.params;
+    const product = await Product.findById(id);
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    if (product.user.toString() !== userId) return res.status(403).json({ message: 'Forbidden' });
+
+    // clear any scheduled timeout
+    const t = testTimeouts.get(String(product._id));
+    if (t) {
+      clearTimeout(t);
+      testTimeouts.delete(String(product._id));
+    }
+
+    await product.deleteOne();
+    res.json({ message: 'Product deleted' });
+  } catch (err) {
+    console.error('deleteProduct error', err);
     res.status(500).json({ message: err.message });
   }
 };
