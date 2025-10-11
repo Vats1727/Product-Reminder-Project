@@ -5,7 +5,7 @@ import connectDB from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import { checkAndSendReminders } from "./controller/productController.js";
-import cron from "node-cron";
+// cron scheduler removed — reminders disabled by configuration
 
 dotenv.config();
 
@@ -24,7 +24,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 
 // Schedule reminder checks once a day at 08:00 server time
-cron.schedule("0 8 * * *", async () => {
-	console.log("Running scheduled reminder check");
-	await checkAndSendReminders();
-});
+// Reminder scheduler removed. Use manual trigger or scripts to inspect candidates.

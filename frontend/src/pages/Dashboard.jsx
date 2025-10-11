@@ -8,6 +8,7 @@ const Dashboard = ({ onLogout }) => {
   const [message, setMessage] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
   const [adding, setAdding] = useState(false);
+  const [dueReminders, setDueReminders] = useState([]);
 
   const fetchUser = async () => {
     try {
@@ -22,6 +23,42 @@ const Dashboard = ({ onLogout }) => {
 
   useEffect(() => {
     fetchUser();
+    // request notification permission once
+    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+      Notification.requestPermission().then(() => {});
+    }
+
+    let mounted = true;
+
+    const fetchDue = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch('http://localhost:5000/api/products/due', { headers: { Authorization: `Bearer ${token}` } });
+        if (!mounted) return;
+        if (res.ok) {
+          const data = await res.json();
+          setDueReminders(data);
+          // show notifications for new items
+          try {
+            const shown = JSON.parse(localStorage.getItem('shownReminders') || '[]');
+            const newOnes = data.filter(d => !shown.includes(d._id));
+            newOnes.forEach(d => {
+              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+                new Notification('Product reminder', { body: `${d.name} expires on ${new Date(d.expiryDate).toLocaleDateString()}` });
+              }
+            });
+            const merged = Array.from(new Set([...shown, ...data.map(d => d._id)]));
+            localStorage.setItem('shownReminders', JSON.stringify(merged));
+          } catch (e) { console.warn('notification error', e); }
+        }
+      } catch (err) {
+        console.error('Failed to fetch due reminders', err);
+      }
+    };
+
+    fetchDue();
+    const interval = setInterval(fetchDue, 60000);
+    return () => { mounted = false; clearInterval(interval); };
   }, []);
 
   const handleCreated = () => {
@@ -55,6 +92,17 @@ const Dashboard = ({ onLogout }) => {
       )}
 
       {adding && <AddProduct onCreated={handleCreated} />}
+
+      {dueReminders.length > 0 && (
+        <div style={{ background: '#fff3cd', padding: '12px', border: '1px solid #ffeeba', marginBottom: '16px' }}>
+          <h4>Due reminders</h4>
+          <ul>
+            {dueReminders.map(d => (
+              <li key={d._id}>{d.name} — expires {new Date(d.expiryDate).toLocaleDateString()}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <ProductList refreshKey={refreshKey} />
     </div>

@@ -38,6 +38,33 @@ export const listProducts = async (req, res) => {
   }
 };
 
+// Return reminders due for the authenticated user (date-only comparison)
+export const getDueReminders = async (req, res) => {
+  try {
+    const userId = req.userId;
+    if (!userId) return res.status(401).json({ message: 'Unauthorized' });
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // find user's products and filter by reminderDate <= today
+    const products = await Product.find({ user: userId });
+    const due = [];
+    for (const p of products) {
+      const reminderDate = new Date(p.expiryDate.getTime() - (p.reminderDaysBefore || 0) * 24 * 60 * 60 * 1000);
+      const remDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
+      if (today >= remDay) {
+        due.push({ _id: p._id, name: p.name, expiryDate: p.expiryDate, reminderDaysBefore: p.reminderDaysBefore });
+      }
+    }
+
+    res.json(due);
+  } catch (err) {
+    console.error('getDueReminders error:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
 // This function is intended to be called by a scheduler to send reminders
 export const checkAndSendReminders = async () => {
   try {
@@ -52,16 +79,13 @@ export const checkAndSendReminders = async () => {
       const reminderDate = new Date(p.expiryDate.getTime() - msBefore);
 
       // send if today is >= reminderDate and we haven't sent after reminderDate
-      const alreadySent = p.lastReminderSent && p.lastReminderSent >= reminderDate;
       // compare only date portion
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const remDay = new Date(reminderDate.getFullYear(), reminderDate.getMonth(), reminderDate.getDate());
 
-      if (today >= remDay && !alreadySent) {
-        // send email
-        await sendReminderEmail(p.user.email, p.user.fullName, p);
-        p.lastReminderSent = now;
-        await p.save();
+      if (today >= remDay) {
+        // Log candidate reminder. Email sending is disabled in services/mailer.js
+        console.log(`Reminder candidate: user=${p.user.email}, product=${p.name}, expiry=${p.expiryDate.toISOString()}, reminderDaysBefore=${p.reminderDaysBefore}`);
       }
     }
   } catch (err) {
