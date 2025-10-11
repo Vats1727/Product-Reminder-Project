@@ -48,7 +48,6 @@ export const createProduct = async (req, res) => {
               p.lastReminderSent = new Date();
               p.testReminderAt = undefined;
               await p.save();
-              emitReminder({ to: p.user.email, name: p.user.fullName, product: p.name, expiryDate: p.expiryDate, info });
             }
           } catch (err) { console.error('Test reminder timeout error', err); }
         }, ms);
@@ -121,7 +120,6 @@ export const checkAndSendReminders = async () => {
           // clear testReminderAt so it doesn't repeat
           p.testReminderAt = undefined;
           await p.save();
-          emitReminder({ to: p.user.email, name: p.user.fullName, product: p.name, expiryDate: p.expiryDate, info });
           continue; // move to next product
         }
       }
