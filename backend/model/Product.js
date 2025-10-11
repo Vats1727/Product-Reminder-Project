@@ -10,6 +10,8 @@ const productSchema = new mongoose.Schema({
   reminderDaysBefore: { type: Number, default: 15 },
   // last reminder sent date (helps avoid duplicate reminders)
   lastReminderSent: { type: Date },
+  // optional test reminder datetime (used when TEST_REMINDER_MINUTES is set)
+  testReminderAt: { type: Date },
 }, { timestamps: true });
 
 export default mongoose.model("Product", productSchema);
