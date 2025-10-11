@@ -1,16 +1,3 @@
-let io = null;
-
-export const setIo = (socketIo) => {
-  io = socketIo;
-};
-
-export const emitReminder = (payload) => {
-  try {
-    if (io) {
-      io.emit('reminder', payload);
-      console.log('Emitted reminder event', payload);
-    }
-  } catch (err) {
-    console.error('Notifier emit error', err);
-  }
-};
+// Notifier (socket) disabled — reminders are delivered in-app via polling/notifications
+export const setIo = () => {};
+export const emitReminder = () => {};
