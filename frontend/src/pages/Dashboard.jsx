@@ -51,6 +51,10 @@ const Dashboard = ({ onLogout }) => {
         const token = localStorage.getItem('token');
         const res = await fetch(`${apiUrl}/api/products/due`, { headers: { Authorization: `Bearer ${token}` } });
         if (!mounted) return;
+        if (!res.ok) {
+          const txt = await res.text();
+          console.warn('Due reminders fetch failed', res.status, txt);
+        }
         if (res.ok) {
           const data = await res.json();
           setDueReminders(data);
@@ -72,6 +76,8 @@ const Dashboard = ({ onLogout }) => {
       }
     };
 
+    // run immediately and then every 60s
+    fetchDue();
     const interval = setInterval(fetchDue, 60000);
     return () => { mounted = false; clearInterval(interval); };
   }, []);
