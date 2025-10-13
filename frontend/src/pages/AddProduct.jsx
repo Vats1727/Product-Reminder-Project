@@ -65,26 +65,31 @@ const AddProduct = ({ onCreated }) => {
   };
 
   return (
-    <div style={{maxWidth:540,margin:'0 auto'}}>
-      <h3>Add Product</h3>
+    <div className="panel">
+      <h3 style={{marginTop:0}}>Add Product</h3>
       <form onSubmit={handleSubmit} className="form" noValidate>
         <label>Product name</label>
-        <input name="name" placeholder="Product Name" value={form.name} onChange={handleChange} />
+        <input name="name" className="input-full" placeholder="Product Name" value={form.name} onChange={handleChange} />
 
         <label>Price</label>
-        <input name="price" type="number" placeholder="Price (e.g. 199.99)" value={form.price} onChange={handleChange} />
+        <input name="price" className="input-medium" type="number" placeholder="Price (e.g. 199.99)" value={form.price} onChange={handleChange} />
 
         <label>Description</label>
-        <textarea name="description" placeholder="Description" value={form.description} onChange={handleChange} />
+        <textarea name="description" className="input-full" placeholder="Description" value={form.description} onChange={handleChange} />
 
-        <label>Purchase Date</label>
-        <input name="purchaseDate" type="date" value={form.purchaseDate} onChange={handleChange} />
-
-        <label>Expiry Date</label>
-        <input name="expiryDate" type="date" value={form.expiryDate} onChange={handleChange} />
+        <div style={{display:'flex',gap:12,alignItems:'flex-end'}}>
+          <div style={{flex:1}}>
+            <label>Purchase Date</label>
+            <input name="purchaseDate" className="input-medium" type="date" value={form.purchaseDate} onChange={handleChange} />
+          </div>
+          <div style={{width:180}}>
+            <label>Expiry Date</label>
+            <input name="expiryDate" className="input-medium" type="date" value={form.expiryDate} onChange={handleChange} />
+          </div>
+        </div>
 
         <label>Reminder Days Before</label>
-        <input name="reminderDaysBefore" type="number" value={form.reminderDaysBefore} onChange={handleChange} />
+        <input name="reminderDaysBefore" className="input-small" type="number" value={form.reminderDaysBefore} onChange={handleChange} />
 
         <div style={{marginTop:8}}>
           <button type="submit" className="btn" disabled={submitting}>{submitting ? 'Creating...' : 'Create'}</button>

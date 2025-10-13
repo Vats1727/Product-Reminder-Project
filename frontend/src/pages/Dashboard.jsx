@@ -168,15 +168,12 @@ const Dashboard = ({ onLogout }) => {
             </div> */}
 
             {adding && (
-              <div className="panel" style={{marginBottom:12}}>
-                <h4>Add product</h4>
-                <div style={{display:'flex',justifyContent:'center'}}>
-                  <AddProduct onCreated={handleCreated} />
-                </div>
+              <div style={{marginBottom:12}}>
+                <AddProduct onCreated={handleCreated} />
               </div>
             )}
 
-            <h3 style={{marginTop:16}}>Your Products</h3>
+            {/* <h3 style={{marginTop:16}}>Your Products</h3> */}
             <ProductList refreshKey={refreshKey} />
             </>
             )}
