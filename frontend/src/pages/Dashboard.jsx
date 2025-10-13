@@ -31,10 +31,11 @@ const Dashboard = ({ onLogout }) => {
     }
   };
 
+  // fetch user and set notification permission on mount
   useEffect(() => {
     (async () => {
       try {
-        console.log('Dashboard: fetching user and due reminders');
+        console.log('Dashboard: fetching user');
         await fetchUser();
       } catch (err) {
         console.error('Dashboard init error', err);
@@ -44,36 +45,38 @@ const Dashboard = ({ onLogout }) => {
     if (typeof Notification !== 'undefined') {
       setNotifyStatus(Notification.permission);
     }
+  }, []);
+
+  // start due-reminder polling after user is loaded (skip for admins)
+  useEffect(() => {
+    if (!user) return; // wait until user is loaded
+    if (user.isAdmin || user.role === 'admin') return; // admin doesn't use user-specific due endpoint
 
     let mounted = true;
     const fetchDue = async () => {
       try {
-        // don't call user-specific endpoint until we have a non-admin user
-        if (!user) return;
-        if (user.isAdmin || user.role === 'admin') return;
         const token = localStorage.getItem('token');
         const res = await fetch(`${apiUrl}/api/products/due`, { headers: { Authorization: `Bearer ${token}` } });
         if (!mounted) return;
         if (!res.ok) {
           const txt = await res.text();
           console.warn('Due reminders fetch failed', res.status, txt);
+          return;
         }
-        if (res.ok) {
-          const data = await res.json();
-          setDueReminders(data);
-          // show browser notifications for new due reminders
-          try {
-            const shown = JSON.parse(localStorage.getItem('shownReminders') || '[]');
-            const newOnes = data.filter(d => !shown.includes(d._id));
-            newOnes.forEach(d => {
-              if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-                new Notification('Product reminder', { body: `${d.name} expires on ${new Date(d.expiryDate).toLocaleDateString()}` });
-              }
-            });
-            const merged = Array.from(new Set([...shown, ...data.map(d => d._id)]));
-            localStorage.setItem('shownReminders', JSON.stringify(merged));
-          } catch (e) { console.warn('notification error', e); }
-        }
+        const data = await res.json();
+        setDueReminders(data);
+        // show browser notifications for new due reminders
+        try {
+          const shown = JSON.parse(localStorage.getItem('shownReminders') || '[]');
+          const newOnes = data.filter(d => !shown.includes(d._id));
+          newOnes.forEach(d => {
+            if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+              new Notification('Product reminder', { body: `${d.name} expires on ${new Date(d.expiryDate).toLocaleDateString()}` });
+            }
+          });
+          const merged = Array.from(new Set([...shown, ...data.map(d => d._id)]));
+          localStorage.setItem('shownReminders', JSON.stringify(merged));
+        } catch (e) { console.warn('notification error', e); }
       } catch (err) {
         console.error('Failed to fetch due reminders', err);
       }
@@ -83,7 +86,7 @@ const Dashboard = ({ onLogout }) => {
     fetchDue();
     const interval = setInterval(fetchDue, 60000);
     return () => { mounted = false; clearInterval(interval); };
-  }, []);
+  }, [user]);
 
   // Real-time sockets removed; reminders are delivered via polling/notifications
 
@@ -105,7 +108,6 @@ const Dashboard = ({ onLogout }) => {
             <button onClick={() => { localStorage.removeItem('token'); if (onLogout) onLogout(); }} className="btn ghost">Logout</button>
           </div>
         </div>
-        {adding && <AddProduct onCreated={handleCreated} />}
 
         <div style={{ marginBottom: 12 }}>
           {notifyStatus === 'unsupported' && <small>Browser notifications not supported.</small>}
@@ -152,7 +154,7 @@ const Dashboard = ({ onLogout }) => {
               <AdminPanel onClose={() => setShowAdmin(false)} />
             ) : (
             <>
-            <div className="panel" style={{marginBottom:12}}>
+            {/* <div className="panel" style={{marginBottom:12}}>
               <h4>Notifications</h4>
               {notifications.length === 0 ? (
                 <p className="muted">No realtime notifications yet.</p>
@@ -163,7 +165,7 @@ const Dashboard = ({ onLogout }) => {
                   ))}
                 </ul>
               )}
-            </div>
+            </div> */}
 
             {adding && (
               <div className="panel" style={{marginBottom:12}}>
