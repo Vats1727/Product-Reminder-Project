@@ -144,12 +144,13 @@ export default function AddProduct() {
 		setEditingId(product.id)
 	}
 
-	function removeProduct(id) {
+	async function removeProduct(id) {
 		if (!window.confirm('Delete this product?')) return
 		try {
-			const list = loadProducts().filter(p => p.id !== id)
-			localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
-			setProducts(list)
+			const list = await loadProducts()
+			const updatedList = list.filter(p => p.id !== id)
+			localStorage.setItem(PRODUCT_KEY, JSON.stringify(updatedList))
+			setProducts(updatedList)
 			toast.success('Product deleted')
 		} catch (err) {
 			console.error(err)
@@ -178,7 +179,7 @@ export default function AddProduct() {
 
 						<label>
 							Product Name
-							<input 
+							<input
 								placeholder="Enter product name"
 								value={form.productName}
 								onChange={e => setForm(f => ({ ...f, productName: e.target.value }))}
@@ -187,10 +188,10 @@ export default function AddProduct() {
 
 						<label>
 							Amount
-							<input 
-								type="number" 
+							<input
+								type="number"
 								placeholder="Enter amount"
-								value={form.amount} 
+								value={form.amount}
 								onChange={e => setForm(f => ({ ...f, amount: e.target.value }))}
 							/>
 						</label>
@@ -207,10 +208,10 @@ export default function AddProduct() {
 							<>
 								<label>
 									Recurring Count
-									<input 
-										type="number" 
+									<input
+										type="number"
 										placeholder="Number of recurrences"
-										value={form.count} 
+										value={form.count}
 										onChange={e => setForm(f => ({ ...f, count: e.target.value }))}
 									/>
 								</label>
@@ -240,9 +241,9 @@ export default function AddProduct() {
 								{editingId ? 'Update Product' : 'Add Product'}
 							</button>
 							{editingId && (
-								<button 
-									type="button" 
-									className="btn-ghost" 
+								<button
+									type="button"
+									className="btn-ghost"
 									onClick={() => {
 										setForm(f => ({
 											...f,
@@ -289,30 +290,31 @@ export default function AddProduct() {
 												<td>{customer ? customer.name : 'Unknown Customer'}</td>
 												<td>{p.productName}</td>
 												<td>{p.amount}</td>
-												<td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
+						 							<td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
 												<td>{p.source}</td>
-											<td>
-												<button 
-													className="btn-ghost" 
-													style={{ marginRight: 8 }} 
-													onClick={() => editProduct(p)}
-												>
-													Edit
-												</button>
-												<button 
-													className="btn-ghost" 
-													onClick={() => removeProduct(p.id)}
-												>
-													Delete
-												</button>
-											</td>
-										</tr>
-									))
+												<td>
+													<button
+														className="btn-ghost"
+														style={{ marginRight: 8 }}
+														onClick={() => editProduct(p)}
+													>
+														Edit
+													</button>
+													<button
+														className="btn-ghost"
+														onClick={() => removeProduct(p.id)}
+													>
+														Delete
+													</button>
+												</td>
+											</tr>
+										)
+									})
 								)}
 							</tbody>
 						</table>
 					</div>
 			</section>
 		</div>
-	)
-}
+	);
+};

@@ -1,6 +1,6 @@
 .app-sidebar {
   width: 260px;
-  background: #144d3a;
+  background: #1e40af;
   color: #fff;
   min-height: 100vh;
   padding: 24px;
@@ -21,7 +21,7 @@
 .logo {
   width: 48px;
   height: 48px;
-  background: #0b3927;
+  background: #1d4ed8;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -109,12 +109,12 @@
 .page-header h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #144d3a;
+  color: #1e40af;
   margin: 0;
 }
 
 .btn-action {
-  background: #144d3a;
+  background: #1e40af;
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -125,7 +125,7 @@
 }
 
 .btn-action:hover {
-  background: #0b3927;
+  background: #1d4ed8;
 }
 
 /* Table */
@@ -135,7 +135,7 @@
 }
 
 .table-header-row {
-  background: #144d3a;
+  background: #1e40af;
   color: #fff;
 }
 
@@ -187,12 +187,12 @@
 
 .form-grid input:focus,
 .form-grid select:focus {
-  border-color: #144d3a;
+  border-color: #1e40af;
   outline: none;
 }
 
 .btn-primary {
-  background: #144d3a;
+  background: #1e40af;
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -203,5 +203,5 @@
 }
 
 .btn-primary:hover {
-  background: #0b3927;
+  background: #1d4ed8;
 }
