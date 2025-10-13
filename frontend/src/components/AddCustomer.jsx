@@ -39,7 +39,9 @@ export default function AddCustomer() {
 	function validate(f) {
 		if (!f.name || !f.email || !f.phone) return 'Please fill all fields'
 		if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) return 'Invalid email'
-		if (!/^\+?[0-9\-\s]{7,20}$/.test(f.phone)) return 'Invalid phone'
+		const digits = (f.phone || '').replace(/\D/g, '')
+		if (!/^\+?[0-9\-\s]{7,20}$/.test(f.phone)) return 'Invalid phone format'
+		if (digits.length > 10) return 'Phone number must be at most 10 digits'
 		return null
 	}
 
@@ -107,21 +109,40 @@ export default function AddCustomer() {
 
 	function removeCustomer(id) {
 		if (!window.confirm('Delete this customer?')) return
-		// try server delete first, fallback to local
-		fetch(`${API}/api/customers/${id}`, { method: 'DELETE' })
-			.then(res => {
+		;(async () => {
+			// If id doesn't look like a Mongo ObjectId, treat as local-only
+			const isObjectId = /^[a-fA-F0-9]{24}$/.test(id)
+			if (!isObjectId) {
+				try {
+					const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id)
+					localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+					setCustomers(list)
+					toast.success('Customer deleted (local)')
+				} catch (e) {
+					console.error('Local delete failed', e)
+					toast.error('Failed to delete customer')
+				}
+				return
+			}
+
+			try {
+				const res = await fetch(`${API}/api/customers/${id}`, { method: 'DELETE' })
 				if (res.ok) {
+					// remove from UI and localStorage if present
 					setCustomers(cs => cs.filter(c => c.id !== id))
 					try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) {}
 					toast.success('Customer deleted')
 				} else {
+					const text = await res.text().catch(() => '')
+					console.warn('Server delete failed', text)
 					// fallback local delete
 					try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); setCustomers(list); toast.success('Customer deleted (local)') } catch (e) { toast.error('Failed to delete customer') }
 				}
-			})
-			.catch(() => {
+			} catch (err) {
+				console.warn('Network error during delete, falling back to local', err)
 				try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); setCustomers(list); toast.success('Customer deleted (local)') } catch (e) { toast.error('Failed to delete customer') }
-			})
+			}
+		})()
 	}
 
 		return (
