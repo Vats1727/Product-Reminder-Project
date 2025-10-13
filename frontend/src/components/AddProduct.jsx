@@ -172,7 +172,7 @@ export default function AddProduct() {
 							Customer
 							<select value={form.customerId} onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))}>
 								<option value="">-- select customer --</option>
-								{customers.map(c => <option key={c.id} value={c.id}>{c.name} ({c.email})</option>)}
+								{customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
 							</select>
 						</label>
 
@@ -281,14 +281,16 @@ export default function AddProduct() {
 										<td colSpan="7" className="empty-row">No products found</td>
 									</tr>
 								) : (
-									products.map(p => (
-										<tr key={p.id}>
-											<td>{p.id}</td>
-											<td>{customers.find(c => c.id === p.customerId)?.name || '—'}</td>
-											<td>{p.productName}</td>
-											<td>{p.amount}</td>
-											<td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
-											<td>{p.source}</td>
+									products.map(p => {
+										const customer = customers.find(c => c.id === p.customerId)
+										return (
+											<tr key={p.id}>
+												<td>{p.id}</td>
+												<td>{customer ? customer.name : 'Unknown Customer'}</td>
+												<td>{p.productName}</td>
+												<td>{p.amount}</td>
+												<td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
+												<td>{p.source}</td>
 											<td>
 												<button 
 													className="btn-ghost" 
