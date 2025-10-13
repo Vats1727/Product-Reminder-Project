@@ -15,6 +15,7 @@ function loadCustomers() {
 export default function AddCustomer() {
 	const [form, setForm] = useState({ name: '', email: '', phone: '' })
 	const [customers, setCustomers] = useState([])
+	const [editingId, setEditingId] = useState(null)
 
 	useEffect(() => {
 		setCustomers(loadCustomers())
@@ -27,24 +28,43 @@ export default function AddCustomer() {
 		return null
 	}
 
-	function addCustomer(e) {
+	function handleSubmit(e) {
 		e.preventDefault()
 		const err = validate(form)
 		if (err) return toast.error(err)
 
 		try {
 			const list = loadCustomers()
-			const id = Date.now().toString()
-			const newCustomer = { id, ...form }
-			list.push(newCustomer)
-			localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-			setCustomers(list)
+			
+			if (editingId) {
+				// Update existing customer
+				const index = list.findIndex(c => c.id === editingId)
+				if (index === -1) throw new Error('Customer not found')
+				list[index] = { ...list[index], ...form }
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+				setCustomers(list)
+				setEditingId(null)
+				toast.success('Customer updated')
+			} else {
+				// Add new customer
+				const id = Date.now().toString()
+				const newCustomer = { id, ...form }
+				list.push(newCustomer)
+				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
+				setCustomers(list)
+				toast.success('Customer added')
+			}
+			
 			setForm({ name: '', email: '', phone: '' })
-			toast.success('Customer added')
 		} catch (err) {
 			console.error(err)
-			toast.error('Failed to save customer')
+			toast.error(editingId ? 'Failed to update customer' : 'Failed to save customer')
 		}
+	}
+
+	function editCustomer(customer) {
+		setForm({ name: customer.name, email: customer.email, phone: customer.phone })
+		setEditingId(customer.id)
 	}
 
 	function removeCustomer(id) {
@@ -60,61 +80,100 @@ export default function AddCustomer() {
 		}
 	}
 
-	return (
-		<div className="page-content">
-			<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-				<h2>Add Customer</h2>
-			</div>
+		return (
+			<div className="page-content">
+				<div className="page-header">
+					<h2>Add Customer</h2>
 
-			<section>
-				<form className="form-grid" onSubmit={addCustomer} style={{ marginBottom: 18 }}>
-					<label>
-						Name
-						<input placeholder="Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-					</label>
+				</div>
 
-					<label>
-						Email
-						<input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-					</label>
+				<section>
+					<form className="form-grid" onSubmit={handleSubmit}>
+						<label>
+							Name
+							<input 
+								placeholder="Enter name" 
+								value={form.name} 
+								onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
+							/>
+						</label>
 
-					<label>
-						Phone
-						<input placeholder="Phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-					</label>
+						<label>
+							Email
+							<input 
+								placeholder="Enter email" 
+								value={form.email} 
+								onChange={e => setForm(f => ({ ...f, email: e.target.value }))} 
+							/>
+						</label>
 
-					<div style={{ alignSelf: 'end' }}>
-						<button className="btn-primary" type="submit">Add Customer</button>
-					</div>
-				</form>
+						<label>
+							Phone
+							<input 
+								placeholder="Enter phone" 
+								value={form.phone} 
+								onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} 
+							/>
+						</label>
 
-				<table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-					<thead>
-						<tr>
-							<th style={{ textAlign: 'left', padding: 8 }}>Customer Id</th>
-							<th style={{ textAlign: 'left', padding: 8 }}>Name</th>
-							<th style={{ textAlign: 'left', padding: 8 }}>Email</th>
-							<th style={{ textAlign: 'left', padding: 8 }}>Phone</th>
-							<th style={{ textAlign: 'left', padding: 8 }}>Actions</th>
-						</tr>
-					</thead>
-					<tbody>
-						{customers.length === 0 && (
-							<tr><td colSpan={5} style={{ textAlign: 'center', padding: 18 }}>No customers found</td></tr>
-						)}
-						{customers.map((c) => (
-							<tr key={c.id}>
-								<td style={{ padding: 8 }}>{c.id}</td>
-								<td style={{ padding: 8 }}>{c.name}</td>
-								<td style={{ padding: 8 }}>{c.email}</td>
-								<td style={{ padding: 8 }}>{c.phone}</td>
-								<td style={{ padding: 8 }}>
-									<button className="btn-ghost" onClick={() => removeCustomer(c.id)}>Delete</button>
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
+						<div className="form-actions">
+							<button type="submit" className="btn-primary">
+								{editingId ? 'Update Customer' : 'Add Customer'}
+							</button>
+							{editingId && (
+								<button 
+									type="button" 
+									className="btn-ghost" 
+									onClick={() => {
+										setForm({ name: '', email: '', phone: '' })
+										setEditingId(null)
+									}}
+								>
+									Cancel
+								</button>
+							)}
+						</div>
+					</form>
+
+						<table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+							<thead>
+								<tr className="table-header-row">
+									<th>Customer Id</th>
+									<th>Name</th>
+									<th>Email</th>
+									<th>Phone</th>
+									<th>Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								{customers.length === 0 && (
+									<tr><td colSpan={5} className="empty-row">No customers found</td></tr>
+								)}
+								{customers.map((c) => (
+									<tr key={c.id}>
+										<td>{c.id}</td>
+										<td>{c.name}</td>
+										<td>{c.email}</td>
+										<td>{c.phone}</td>
+										<td>
+											<button 
+												className="btn-ghost" 
+												style={{ marginRight: 8 }} 
+												onClick={() => editCustomer(c)}
+											>
+												Edit
+											</button>
+											<button 
+												className="btn-ghost" 
+												onClick={() => removeCustomer(c.id)}
+											>
+												Delete
+											</button>
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
 			</section>
 		</div>
 	)

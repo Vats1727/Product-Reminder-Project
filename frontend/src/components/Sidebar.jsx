@@ -1,18 +1,23 @@
 import React from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import './sidebar.css'
 
+export default function Sidebar() {
+  const location = useLocation()
+  const isActive = path => location.pathname === path
 
-export default function Sidebar({ onNavigate }) {
-return (
-<aside className="sidebar">
-
-
-<nav className="nav">
-<button className="nav-btn" onClick={() => onNavigate('customers')}>Add Customer</button>
-<button className="nav-btn" onClick={() => onNavigate('products')}>Add Product</button>
-</nav>
-
-
-<div className="version">v1.0.0</div>
-</aside>
-)
+  return (
+    <aside className="app-sidebar">
+      <nav className="nav-list">
+        <Link to="/add-customer" className={`nav-item ${isActive('/add-customer') ? 'active' : ''}`}>
+          <span className="nav-icon"></span>
+          Add Customer
+        </Link>
+        <Link to="/add-product" className={`nav-item ${isActive('/add-product') ? 'active' : ''}`}>
+          <span className="nav-icon"></span>
+          Add Product
+        </Link>
+      </nav>
+    </aside>
+  )
 }
