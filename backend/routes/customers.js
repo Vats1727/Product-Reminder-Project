@@ -63,4 +63,37 @@ router.delete('/:id/products/:productId', async (req, res) => {
   }
 })
 
+// Update customer
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, email, phone } = req.body
+    const c = await Customer.findById(req.params.id)
+    if (!c) return res.status(404).json({ error: 'Not found' })
+    if (name !== undefined) c.name = name
+    if (email !== undefined) c.email = email
+    if (phone !== undefined) c.phone = phone
+    await c.save()
+    const populated = await Customer.findById(c._id).populate('products')
+    res.json(populated)
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// Delete customer and unlink from products
+router.delete('/:id', async (req, res) => {
+  try {
+    const c = await Customer.findById(req.params.id)
+    if (!c) return res.status(404).json({ error: 'Not found' })
+    // remove this customer from any products
+    await Product.updateMany({ _id: { $in: c.products } }, { $pull: { customers: c._id } })
+    await c.remove()
+    res.json({ success: true })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ error: 'Failed to delete' })
+  }
+})
+
 module.exports = router

@@ -7,6 +7,7 @@ const ProductSchema = new mongoose.Schema({
   count: { type: Number, default: 1 },
   period: { type: String, default: 'Months' },
   source: { type: String, default: 'In-house' },
+  datePurchased: { type: Date },
   customers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }]
 }, { timestamps: true })
 
