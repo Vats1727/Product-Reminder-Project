@@ -3,11 +3,27 @@ import { toast } from 'react-toastify'
 
 const CUSTOMER_KEY = 'ss_customers'
 const PRODUCT_KEY = 'ss_products'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-function loadCustomers() {
+async function loadCustomers() {
+	try {
+		const res = await fetch(`${API}/api/customers`)
+		if (res.ok) {
+			const data = await res.json()
+			return data.map(c => ({ id: c._id || c.id, name: c.name, email: c.email }))
+		}
+	} catch (e) {}
 	try { return JSON.parse(localStorage.getItem(CUSTOMER_KEY) || '[]') } catch { return [] }
 }
-function loadProducts() {
+
+async function loadProducts() {
+	try {
+		const res = await fetch(`${API}/api/products`)
+		if (res.ok) {
+			const data = await res.json()
+			return data.map(p => ({ id: p._id || p.id, ...p }))
+		}
+	} catch (e) {}
 	try { return JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]') } catch { return [] }
 }
 
@@ -25,12 +41,15 @@ export default function AddProduct() {
 		source: 'In-house' 
 	})
 
-  useEffect(() => {
-		const cs = loadCustomers()
-		setCustomers(cs)
-		const ps = loadProducts()
-		setProducts(ps)
-		if (cs.length && !form.customerId) setForm(f => ({ ...f, customerId: cs[0].id }))
+	useEffect(() => {
+		let mounted = true
+		Promise.all([loadCustomers(), loadProducts()]).then(([cs, ps]) => {
+			if (!mounted) return
+			setCustomers(cs)
+			setProducts(ps)
+			if (cs.length && !form.customerId) setForm(f => ({ ...f, customerId: cs[0].id }))
+		})
+		return () => { mounted = false }
 	}, [])
 
 	function validate(f) {
@@ -41,38 +60,62 @@ export default function AddProduct() {
 		return null
 	}
 
-	function handleSubmit(e) {
+	async function handleSubmit(e) {
 		e.preventDefault()
 		const err = validate(form)
 		if (err) return toast.error(err)
 
 		try {
-			const list = loadProducts()
-			
+			const payload = { 
+				customerId: form.customerId,
+				productName: form.productName,
+				amount: Number(form.amount),
+				type: form.type,
+				count: Number(form.count),
+				period: form.period,
+				source: form.source
+			}
+			const res = await fetch(`${API}/api/products`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+			if (res.ok) {
+				const saved = await res.json()
+				const ps = await loadProducts()
+				setProducts(ps)
+				setForm(f => ({ 
+					...f, 
+					productName: '',
+					amount: '', 
+					type: 'One-time', 
+					count: 1, 
+					period: 'Months', 
+					source: 'In-house' 
+				}))
+				setEditingId(null)
+				toast.success(editingId ? 'Product updated' : 'Product added')
+				return
+			}
+		} catch (err) {
+			console.warn('Server unreachable, falling back to localStorage', err)
+		}
+
+		// Local fallback
+		try {
+			const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]')
 			if (editingId) {
-				// Update existing product
 				const index = list.findIndex(p => p.id === editingId)
 				if (index === -1) throw new Error('Product not found')
-				list[index] = { 
-					...list[index], 
-					...form, 
-					amount: Number(form.amount), 
-					count: Number(form.count) 
-				}
+				list[index] = { ...list[index], ...form, amount: Number(form.amount), count: Number(form.count) }
 				localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
 				setProducts(list)
 				setEditingId(null)
-				toast.success('Product updated')
+				toast.success('Product updated (local)')
 			} else {
-				// Add new product
 				const id = Date.now().toString()
 				const item = { id, ...form, amount: Number(form.amount), count: Number(form.count) }
 				list.push(item)
 				localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
 				setProducts(list)
-				toast.success('Product added')
+				toast.success('Product added (local)')
 			}
-			
 			setForm(f => ({ 
 				...f, 
 				productName: '',

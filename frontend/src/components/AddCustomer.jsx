@@ -2,8 +2,21 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
 const STORAGE_KEY = 'ss_customers'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-function loadCustomers() {
+async function loadCustomers() {
+	// Try server first
+	try {
+		const res = await fetch(`${API}/api/customers`)
+		if (res.ok) {
+			const data = await res.json()
+			// map Mongo _id -> id for compatibility with the UI
+			return data.map(c => ({ id: c._id || c.id, name: c.name, email: c.email, phone: c.phone, products: c.products }))
+		}
+	} catch (e) {
+		// fall through to localStorage
+	}
+
 	try {
 		return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
 	} catch (e) {
@@ -18,7 +31,9 @@ export default function AddCustomer() {
 	const [editingId, setEditingId] = useState(null)
 
 	useEffect(() => {
-		setCustomers(loadCustomers())
+		let mounted = true
+		loadCustomers().then(list => { if (mounted) setCustomers(list) })
+		return () => { mounted = false }
 	}, [])
 
 	function validate(f) {
@@ -28,33 +43,51 @@ export default function AddCustomer() {
 		return null
 	}
 
-	function handleSubmit(e) {
+	async function handleSubmit(e) {
 		e.preventDefault()
 		const err = validate(form)
 		if (err) return toast.error(err)
 
 		try {
-			const list = loadCustomers()
-			
+			// Try server
+			const payload = { name: form.name, email: form.email, phone: form.phone }
+			const res = await fetch(`${API}/api/customers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+			if (res.ok) {
+				const saved = await res.json()
+				// refresh list from server
+				const list = await loadCustomers()
+				setCustomers(list)
+				setForm({ name: '', email: '', phone: '' })
+				setEditingId(null)
+				toast.success(editingId ? 'Customer updated' : 'Customer added')
+				return
+			}
+
+			// fallback to localStorage if server returns non-ok
+			console.warn('Server returned error creating customer, falling back to localStorage')
+		} catch (err) {
+			console.warn('Server unreachable, falling back to localStorage', err)
+		}
+
+		// LocalStorage fallback
+		try {
+			const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
 			if (editingId) {
-				// Update existing customer
 				const index = list.findIndex(c => c.id === editingId)
 				if (index === -1) throw new Error('Customer not found')
 				list[index] = { ...list[index], ...form }
 				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
 				setCustomers(list)
 				setEditingId(null)
-				toast.success('Customer updated')
+				toast.success('Customer updated (local)')
 			} else {
-				// Add new customer
 				const id = Date.now().toString()
 				const newCustomer = { id, ...form }
 				list.push(newCustomer)
 				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
 				setCustomers(list)
-				toast.success('Customer added')
+				toast.success('Customer added (local)')
 			}
-			
 			setForm({ name: '', email: '', phone: '' })
 		} catch (err) {
 			console.error(err)
