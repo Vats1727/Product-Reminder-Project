@@ -11,6 +11,7 @@ const Dashboard = ({ onLogout }) => {
   const [adding, setAdding] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [dueReminders, setDueReminders] = useState([]);
+  const [notifyStatus, setNotifyStatus] = useState(typeof Notification !== 'undefined' ? Notification.permission : 'unsupported');
   const [notifications, setNotifications] = useState([]);
 
   const apiUrl = (import.meta.env && import.meta.env.VITE_API_URL) || "http://localhost:5000";
@@ -31,10 +32,17 @@ const Dashboard = ({ onLogout }) => {
   };
 
   useEffect(() => {
-    fetchUser();
+    (async () => {
+      try {
+        console.log('Dashboard: fetching user and due reminders');
+        await fetchUser();
+      } catch (err) {
+        console.error('Dashboard init error', err);
+      }
+    })();
     // request notification permission
-    if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
-      Notification.requestPermission().then(() => {});
+    if (typeof Notification !== 'undefined') {
+      setNotifyStatus(Notification.permission);
     }
 
     let mounted = true;
@@ -64,25 +72,11 @@ const Dashboard = ({ onLogout }) => {
       }
     };
 
-    fetchDue();
     const interval = setInterval(fetchDue, 60000);
     return () => { mounted = false; clearInterval(interval); };
   }, []);
 
-  // Socket.IO connection for realtime reminders
-  useEffect(() => {
-    const socket = io(apiUrl);
-    socket.on('connect', () => console.log('socket connected', socket.id));
-    socket.on('reminder', (payload) => {
-      setNotifications(n => [payload, ...n]);
-      try {
-        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-          new Notification('Reminder', { body: `${payload.product} expires on ${new Date(payload.expiryDate).toLocaleDateString()}` });
-        }
-      } catch (e) { /* ignore */ }
-    });
-    return () => socket.disconnect();
-  }, []);
+  // Real-time sockets removed; reminders are delivered via polling/notifications
 
   const handleCreated = () => {
     setRefreshKey(k => k + 1);
@@ -101,6 +95,20 @@ const Dashboard = ({ onLogout }) => {
             <button onClick={() => setAdding(a => !a)} className="btn" style={{marginRight:8}}>{adding ? 'Close' : 'Add Product'}</button>
             <button onClick={() => { localStorage.removeItem('token'); if (onLogout) onLogout(); }} className="btn ghost">Logout</button>
           </div>
+        </div>
+        {adding && <AddProduct onCreated={handleCreated} />}
+
+        <div style={{ marginBottom: 12 }}>
+          {notifyStatus === 'unsupported' && <small>Browser notifications not supported.</small>}
+          {notifyStatus === 'granted' && <small>Notifications enabled.</small>}
+          {notifyStatus === 'denied' && <small>Notifications denied — enable in browser settings.</small>}
+          {notifyStatus === 'default' && (
+            <button className="btn" onClick={() => {
+              if (typeof Notification !== 'undefined') {
+                Notification.requestPermission().then(p => setNotifyStatus(p));
+              }
+            }}>Enable notifications</button>
+          )}
         </div>
 
         {message && <p className="muted">{message}</p>}
