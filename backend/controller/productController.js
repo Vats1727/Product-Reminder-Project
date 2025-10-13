@@ -10,25 +10,33 @@ export const createProduct = async (req, res) => {
   try {
     const { name, description, price, purchaseDate, expiryDate, reminderDaysBefore } = req.body;
     const userId = req.userId; // assume middleware sets this from JWT
-
-    if (!name || !purchaseDate || !expiryDate) {
-      return res.status(400).json({ message: "name, purchaseDate and expiryDate are required" });
-    }
-
-    if (price === undefined || price === null || price === '') {
-      return res.status(400).json({ message: "price is required" });
-    }
+    // Server-side validation
+    if (!name || String(name).trim().length < 2) return res.status(400).json({ message: 'Name is required (min 2 characters)' });
+    if (!purchaseDate) return res.status(400).json({ message: 'purchaseDate is required' });
+    if (!expiryDate) return res.status(400).json({ message: 'expiryDate is required' });
+    if (price === undefined || price === null || price === '') return res.status(400).json({ message: 'price is required' });
     const priceNum = Number(price);
-    if (Number.isNaN(priceNum) || priceNum < 0) return res.status(400).json({ message: "price must be a non-negative number" });
+    if (Number.isNaN(priceNum) || priceNum <= 0) return res.status(400).json({ message: 'price must be a number greater than 0' });
+
+    const pd = new Date(purchaseDate);
+    const ed = new Date(expiryDate);
+    if (!(pd instanceof Date) || Number.isNaN(pd.getTime())) return res.status(400).json({ message: 'purchaseDate is invalid' });
+    if (!(ed instanceof Date) || Number.isNaN(ed.getTime())) return res.status(400).json({ message: 'expiryDate is invalid' });
+    if (ed <= pd) return res.status(400).json({ message: 'expiryDate must be after purchaseDate' });
+
+    const reminder = Number(reminderDaysBefore || 0);
+    if (Number.isNaN(reminder) || reminder < 0) return res.status(400).json({ message: 'reminderDaysBefore must be 0 or a positive number' });
+    const daysBetween = Math.ceil((ed - pd) / (24*60*60*1000));
+    if (reminder >= daysBetween) return res.status(400).json({ message: 'reminderDaysBefore must be less than total days between purchase and expiry' });
 
     const productData = {
       user: userId,
-      name,
-      description,
+      name: String(name).trim(),
+      description: description || '',
       price: priceNum,
-      purchaseDate: new Date(purchaseDate),
-      expiryDate: new Date(expiryDate),
-      reminderDaysBefore: reminderDaysBefore || 15,
+      purchaseDate: pd,
+      expiryDate: ed,
+      reminderDaysBefore: reminder || 15,
     };
 
     // If TEST_REMINDER_MINUTES is set, schedule a quick test reminder
