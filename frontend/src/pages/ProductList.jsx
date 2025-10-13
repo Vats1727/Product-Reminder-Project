@@ -69,6 +69,7 @@ const ProductList = ({ refreshKey }) => {
             <th>Price</th>
             <th>Expiry Date</th>
             <th>Reminder Days</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -91,7 +92,7 @@ const ProductList = ({ refreshKey }) => {
                   <td>{p.price != null ? `₹ ${Number(p.price).toFixed(2)}` : '—'}</td>
                   <td>{new Date(p.expiryDate).toLocaleDateString()}</td>
                   <td>{p.reminderDaysBefore}</td>
-                  <td>
+                  <td className="actions-col">
                     <button className="btn" onClick={() => startEdit(p)} style={{marginRight:8}}>Edit</button>
                     <button className="btn ghost" onClick={() => deleteProduct(p._id)}>Delete</button>
                   </td>

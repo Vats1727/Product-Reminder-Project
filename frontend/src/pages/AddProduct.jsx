@@ -65,7 +65,7 @@ const AddProduct = ({ onCreated }) => {
   };
 
   return (
-    <div className="panel" style={{maxWidth:540,margin:'0 auto'}}>
+    <div style={{maxWidth:540,margin:'0 auto'}}>
       <h3>Add Product</h3>
       <form onSubmit={handleSubmit} className="form" noValidate>
         <label>Product name</label>

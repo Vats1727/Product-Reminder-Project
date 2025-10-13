@@ -170,7 +170,9 @@ const Dashboard = ({ onLogout }) => {
             {adding && (
               <div className="panel" style={{marginBottom:12}}>
                 <h4>Add product</h4>
-                <AddProduct onCreated={handleCreated} />
+                <div style={{display:'flex',justifyContent:'center'}}>
+                  <AddProduct onCreated={handleCreated} />
+                </div>
               </div>
             )}
 
