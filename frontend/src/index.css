@@ -65,3 +65,25 @@ textarea{min-height:80px}
   .dash-grid{grid-template-columns:1fr}
 }
 
+/* Admin panel styles */
+.admin-panel{padding:16px}
+.admin-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.admin-controls{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.search-box{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;background:#f8fafc;border:1px solid #eef2f7;flex:1}
+.search-box input{border:0;background:transparent;outline:none;width:100%}
+.select-filter{padding:8px;border-radius:8px;border:1px solid #e6e9ef}
+.users-list{display:flex;flex-direction:column;gap:10px}
+.user-card{border:1px solid #eef2f7;border-radius:10px;background:#fff;overflow:hidden}
+.user-toggle{width:100%;display:flex;justify-content:space-between;align-items:center;padding:12px;border:0;background:transparent;cursor:pointer}
+.user-name{font-weight:600}
+.user-email{font-size:0.9rem}
+.user-meta{display:flex;align-items:center;gap:8px}
+.tag{background:#eef2ff;color:#1e3a8a;padding:6px 8px;border-radius:20px;font-size:0.85rem}
+.user-products{padding:10px;border-top:1px solid #f1f5f9}
+.products-scroll{display:flex;flex-direction:column;gap:8px;max-height:280px;overflow:auto;padding-right:6px}
+.product-item{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;background:#fbfdff}
+.product-name{font-weight:600}
+.product-actions{display:flex;gap:8px}
+.due{color:var(--danger);font-weight:600}
+
+

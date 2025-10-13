@@ -98,10 +98,10 @@ const Dashboard = ({ onLogout }) => {
         <div className="topbar" style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
           <h2>Dashboard</h2>
           <div className="header-actions">
-            {user && user.role === 'admin' && (
+            {/* {user && user.role === 'admin' && (
               <button onClick={() => setShowAdmin(s => !s)} className="btn" style={{marginRight:8}}>{showAdmin ? 'Close Admin' : 'Admin Panel'}</button>
             )}
-            <button onClick={() => setAdding(a => !a)} className="btn" style={{marginRight:8}}>{adding ? 'Close' : 'Add Product'}</button>
+            <button onClick={() => setAdding(a => !a)} className="btn" style={{marginRight:8}}>{adding ? 'Close' : 'Add Product'}</button> */}
             <button onClick={() => { localStorage.removeItem('token'); if (onLogout) onLogout(); }} className="btn ghost">Logout</button>
           </div>
         </div>
@@ -129,7 +129,7 @@ const Dashboard = ({ onLogout }) => {
                 <h3>User Details</h3>
                 <p><strong>Name:</strong> {user.fullName}</p>
                 <p><strong>Email:</strong> {user.email}</p>
-                <p><strong>Phone:</strong> {user.phone}</p>
+                {/* <p><strong>Phone:</strong> {user.phone}</p> */}
               </div>
             ) : (
               <div className="panel">Loading user...</div>
