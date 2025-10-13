@@ -48,6 +48,9 @@ const Dashboard = ({ onLogout }) => {
     let mounted = true;
     const fetchDue = async () => {
       try {
+        // don't call user-specific endpoint until we have a non-admin user
+        if (!user) return;
+        if (user.isAdmin || user.role === 'admin') return;
         const token = localStorage.getItem('token');
         const res = await fetch(`${apiUrl}/api/products/due`, { headers: { Authorization: `Bearer ${token}` } });
         if (!mounted) return;
