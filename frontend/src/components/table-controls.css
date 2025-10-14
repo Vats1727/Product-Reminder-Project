@@ -1,13 +1,17 @@
 
+
   .table-controls {
     margin: 1.5rem 0;
     display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
     padding: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
   }
 
   .filters {
@@ -15,7 +19,7 @@
     flex-wrap: wrap;
     gap: 1rem;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0;
   }
 
   /* Control groups alignment */
@@ -49,17 +53,20 @@
     outline: none;
   }
 
+
   .pagination {
     display: flex;
     align-items: center;
     gap: 1rem;
+    flex-direction: row;
+    margin-left: auto;
   }
 
   .pagination-button.arrow-theme {
-    padding: 0.5rem 1.2rem;
+    
     border: none;
     background: #114d3a;
-    color: #fff;
+    color: #000000;
     border-radius: 50%;
     font-size: 1.3rem;
     box-shadow: 0 1px 4px rgba(25, 118, 210, 0.12);
@@ -68,7 +75,7 @@
   }
   .pagination-button.arrow-theme:disabled {
     background: #bdbdbd;
-    color: #eee;
+    color: #000000;
     cursor: not-allowed;
   }
   .pagination-button.arrow-theme:hover:not(:disabled) {
@@ -109,7 +116,7 @@
 }
 
 .pagination-button.arrow-theme {
-  padding: 0.5rem 1.2rem;
+  padding: 10px 20px;
   border: none;
   background: #114d3a;
   color: #fff;

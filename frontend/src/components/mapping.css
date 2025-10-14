@@ -7,11 +7,12 @@
   padding: 18px;
   box-shadow: 0 8px 30px rgba(12,36,24,0.06);
   border: 1px solid rgba(17,77,58,0.06);
+  box-sizing: border-box;
 }
 
 /* Remarks textarea */
 .mapping-remarks-textarea {
-  width: 100%;
+  width: 50%;
   padding: 12px 14px;
   border: 1px solid rgba(17,77,58,0.12);
   border-radius: 10px;
@@ -21,6 +22,7 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
   resize: vertical;
   font-size: 14px;
+  gap: 15px;
 }
 
 .mapping-remarks-textarea:focus {

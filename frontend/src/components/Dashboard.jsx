@@ -157,7 +157,7 @@ export default function Dashboard() {
     <div className="page-content">
       <div className="page-header"><h2>Dashboard</h2></div>
       <section>
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+        {/* <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
           <label>Due Period
             <select value={duePeriodFilter} onChange={e => { setDuePeriodFilter(e.target.value); setCurrentPage(1) }}>
               <option value="">All</option>
@@ -168,7 +168,7 @@ export default function Dashboard() {
               <option value="Expired">Expired</option>
             </select>
           </label>
-        </div>
+        </div> */}
         <TableControls
           searchQuery={searchQuery}
           onSearchChange={handleSearch}
