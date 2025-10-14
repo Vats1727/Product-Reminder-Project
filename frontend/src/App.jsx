@@ -4,7 +4,7 @@ import { ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import './App.css'
 
-import Sidebar from './components/Sidebar'
+import AdminLayout from './components/AdminLayout'
 import AddCustomer from './components/AddCustomer'
 import AddProduct from './components/AddProduct'
 import CustomerProductMapping from './components/CustomerProductMapping'
@@ -12,17 +12,14 @@ import CustomerProductMapping from './components/CustomerProductMapping'
 export default function App() {
   return (
     <BrowserRouter>
-      <div className="admin-root">
-        <Sidebar />
-        <main className="admin-main">
-          <Routes>
-            <Route path="/add-customer" element={<AddCustomer />} />
-            <Route path="/add-product" element={<AddProduct />} />
-            <Route path="/map-products" element={<CustomerProductMapping />} />
-            <Route path="/" element={<Navigate to="/add-customer" replace />} />
-          </Routes>
-        </main>
-      </div>
+      <AdminLayout>
+        <Routes>
+          <Route path="/add-customer" element={<AddCustomer />} />
+          <Route path="/add-product" element={<AddProduct />} />
+          <Route path="/map-products" element={<CustomerProductMapping />} />
+          <Route path="/" element={<Navigate to="/add-customer" replace />} />
+        </Routes>
+      </AdminLayout>
       <ToastContainer 
         position="top-right"
         autoClose={3000}

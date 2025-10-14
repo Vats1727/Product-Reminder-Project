@@ -40,16 +40,11 @@ router.post('/', async (req, res) => {
     await mapping.save()
 
     // Add product to customer's products array
-    if (!customer.products.includes(productId)) {
-      customer.products.push(productId)
-      await customer.save()
-    }
+    // Add product to customer's products array (use $addToSet to avoid running validators on document save)
+    await Customer.updateOne({ _id: customerId }, { $addToSet: { products: productId } })
 
-    // Add customer to product's customers array
-    if (!product.customers.includes(customerId)) {
-      product.customers.push(customerId)
-      await product.save()
-    }
+    // Add customer to product's customers array (use $addToSet to avoid running validators on document save)
+    await Product.updateOne({ _id: productId }, { $addToSet: { customers: customerId } })
 
     const populatedMapping = await CustomerProductMap.findById(mapping._id)
       .populate('customerId')
