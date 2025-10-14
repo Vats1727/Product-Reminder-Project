@@ -3,6 +3,7 @@
   height: 100%;
 }
 
+/* Base layout */
 .admin-root {
   display: flex;
   min-height: 100vh;
@@ -19,17 +20,35 @@
 .sidebar-collapsed .admin-main {
   margin-left: 80px;
 }
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+
+/* Common button and control styles */
+.btn-primary, .btn-ghost {
+  margin-right: auto;  /* Align buttons to left */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  height: 36px;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+/* Action buttons container */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  margin: 16px 0;
 }
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+
+/* Form layouts */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  align-items: start;
+  margin-bottom: 24px;
 }
 
 @keyframes logo-spin {
@@ -55,17 +74,74 @@
 .page-content h2 {
   color: #124a36;
   margin-top: 8px;
+  margin-bottom: 24px;
 }
 
-/* form helper */
-.form-grid input, .form-grid select {
-  padding: 8px 10px;
+/* Form styles */
+.form-grid input,
+.form-grid select,
+.form-grid textarea {
+  width: 100%;
+  padding: 10px 12px;
   border: 1px solid #ddd;
-  border-radius: 4px;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-@media (min-width: 900px) {
-  .form-grid { grid-template-columns: 1fr 1fr }
+.form-grid input:focus,
+.form-grid select:focus,
+.form-grid textarea:focus {
+  outline: none;
+  border-color: #114d3a;
+  box-shadow: 0 0 0 3px rgba(17,77,58,0.1);
+}
+
+/* Table styles */
+.table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 16px 0;
+}
+
+.table th {
+  background: #114d3a;
+  color: #fff;
+  font-weight: 500;
+  text-align: left;
+  padding: 14px 16px;
+}
+
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #eee;
+  vertical-align: top;
+}
+
+.table tr:hover td {
+  background: rgba(17,77,58,0.02);
+}
+
+/* Button alignment in forms and tables */
+.form-actions,
+.table-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-start;
+  margin: 16px 0;
+}
+
+@media (max-width: 768px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-responsive {
+    overflow-x: auto;
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
 }
 
 .read-the-docs {

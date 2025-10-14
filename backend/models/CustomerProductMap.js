@@ -36,7 +36,7 @@ const customerProductMapSchema = new mongoose.Schema({
   },
   period: {
     type: String,
-    enum: ['Days', 'Months', 'Quarters', 'Years']
+    enum: ['Days', 'Months', 'Years']
   }
 })
 

@@ -387,7 +387,6 @@ export default function CustomerProductMapping() {
                                   >
                                     <option>Days</option>
                                     <option>Months</option>
-                                    <option>Quarters</option>
                                     <option>Years</option>
                                   </select>
                                 </label>

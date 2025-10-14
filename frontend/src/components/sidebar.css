@@ -3,13 +3,16 @@
   background: #114d3a;
   color: #fff;
   min-height: 100vh;
-  padding: 24px;
+  padding: 24px 16px;
   box-sizing: border-box;
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
   transition: width 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .app-sidebar.collapsed {
@@ -25,6 +28,7 @@
   padding: 12px;
   border-radius: 8px;
   transition: background-color 0.2s;
+  margin-left: 0;  /* Ensure left alignment */
 }
 
 .app-sidebar.collapsed .nav-item span:not(.nav-icon) {

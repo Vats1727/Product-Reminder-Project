@@ -7,9 +7,8 @@ function addPeriod(date, count, period) {
   if (!count) count = 1
   switch ((period || 'Months').toLowerCase()) {
     case 'days': d.setDate(d.getDate() + count); break
-    case 'months': d.setMonth(d.getMonth() + count); break
-    case 'quarters': d.setMonth(d.getMonth() + count * 3); break
-    case 'years': d.setFullYear(d.getFullYear() + count); break
+  case 'months': d.setMonth(d.getMonth() + count); break
+  case 'years': d.setFullYear(d.getFullYear() + count); break
     default: d.setMonth(d.getMonth() + count); break
   }
   return d

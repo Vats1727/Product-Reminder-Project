@@ -1,13 +1,23 @@
-/* mapping.css - reused styles for dashboard and mapping page */
+/* mapping.css - refined styles for mapping page: better contrast, spacing, and visible controls */
 
+/* General card and layout */
+.mapping-card {
+  background: linear-gradient(180deg, #ffffff, #fbfbfc);
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 8px 30px rgba(12,36,24,0.06);
+  border: 1px solid rgba(17,77,58,0.06);
+}
+
+/* Remarks textarea */
 .mapping-remarks-textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgba(17,77,58,0.15);
-  border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(17,77,58,0.12);
+  border-radius: 10px;
   background: #fff;
-  color: #163b2e;
-  box-shadow: 0 1px 2px rgba(17,77,58,0.04);
+  color: #123e31;
+  box-shadow: 0 4px 14px rgba(18,62,49,0.03);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
   resize: vertical;
   font-size: 14px;
@@ -15,45 +25,126 @@
 
 .mapping-remarks-textarea:focus {
   outline: none;
-  border-color: #114d3a;
-  box-shadow: 0 6px 18px rgba(17,77,58,0.08);
+  border-color: #0e3f31;
+  box-shadow: 0 10px 30px rgba(16,64,48,0.08);
   transform: translateY(-1px);
 }
 
+/* Date input */
 .mapping-date-input {
   display: block;
   width: 100%;
   max-width: 220px;
-  padding: 8px 10px;
-  border: 1px solid rgba(17,77,58,0.15);
-  border-radius: 8px;
-  background: linear-gradient(180deg,#ffffff,#fbfffb);
-  color: #163b2e;
+  padding: 0px 12px;
+  border: 1px solid rgba(17,77,58,0.12);
+  border-radius: 10px;
+  background: #ffffff;
+  color: #0f3a2e;
   transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
 }
 
 .mapping-date-input:focus {
   outline: none;
   border-color: #0e3f31;
-  box-shadow: 0 8px 22px rgba(16,64,48,0.09);
+  box-shadow: 0 10px 30px rgba(16,64,48,0.08);
   transform: translateY(-1px);
 }
 
-.mapping-date-input:focus::-webkit-calendar-picker-indicator {
-  filter: hue-rotate(80deg) saturate(120%) brightness(0.9);
+.mapping-date-input::-webkit-calendar-picker-indicator {
+  filter: none;
 }
 
+/* Inline control group for mapping rows */
 .mapping-inline-controls {
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
-.mapping-inline-controls .btn-primary {
+/* Buttons */
+.btn-primary {
+  padding: 8px 12px;
+  background: linear-gradient(90deg,#0e6b4f,#114d3a);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(17,77,58,0.12);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+}
+
+.btn-ghost {
+  padding: 8px 12px;
+  background: transparent;
+  color: #114d3a;
+  border: 1px solid rgba(17,77,58,0.08);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.btn-ghost:hover {
+  background: rgba(17,77,58,0.04);
+}
+
+/* Edit product details box */
+.edit-product-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.edit-product-details label {
+  font-size: 13px;
+  color: #214b3f;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.edit-product-details input,
+.edit-product-details select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(17,77,58,0.12);
+  border-radius: 6px;
+  background: #fff;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+
+/* Table cell alignment */
+.table td {
+  vertical-align: top;
+  padding: 16px;
+}
+
+/* Action buttons in table */
+.table-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+/* Small helpers to ensure visibility in table */
+.table .btn-ghost, .table .btn-primary {
+  font-size: 13px;
   padding: 6px 10px;
 }
 
-.mapping-inline-controls .btn-ghost {
-  padding: 6px 10px;
+@media (max-width: 860px) {
+  .edit-product-details {
+    grid-template-columns: 1fr;
+  }
 }
