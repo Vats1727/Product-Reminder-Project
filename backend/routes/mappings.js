@@ -81,6 +81,36 @@ router.put('/:id', async (req, res) => {
   }
 })
 
+// Update product details for a specific mapping
+router.put('/:id/details', async (req, res) => {
+  try {
+    const mapping = await CustomerProductMap.findById(req.params.id);
+    if (!mapping) {
+      return res.status(404).json({ error: 'Mapping not found' });
+    }
+
+    // Update the product detail fields
+    const updateFields = {};
+    ['amount', 'type', 'source', 'count', 'period'].forEach(field => {
+      if (req.body[field] !== undefined) {
+        updateFields[field] = req.body[field];
+      }
+    });
+
+    const updatedMapping = await CustomerProductMap.findByIdAndUpdate(
+      req.params.id,
+      updateFields,
+      { new: true }
+    ).populate('customerId')
+      .populate('productId');
+
+    res.json(updatedMapping);
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ error: err.message });
+  }
+});
+
 // Delete mapping
 router.delete('/:id', async (req, res) => {
   try {

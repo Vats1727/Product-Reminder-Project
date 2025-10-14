@@ -3,49 +3,47 @@ import TableControls from './TableControls'
 import './table-controls.css'
 import { toast } from 'react-toastify'
 
-const STORAGE_KEY = 'ss_customers'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
-async function loadCustomers() {
-	// Try server first
-	try {
-		const res = await fetch(`${API}/api/customers`)
-		if (res.ok) {
-			const data = await res.json()
-			// map Mongo _id -> id for compatibility with the UI
-			return data.map(c => ({ id: c._id || c.id, name: c.name, email: c.email, phone: c.phone, products: c.products }))
-		}
-	} catch (e) {
-		// fall through to localStorage
-	}
-
-	try {
-		return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-	} catch (e) {
-		console.error('Failed parsing customers from localStorage', e)
-		return []
-	}
-}
-
 export default function AddCustomer() {
-		const [form, setForm] = useState({ name: '', email: '', phone: '' })
-		const [customers, setCustomers] = useState([])
-		const [editingId, setEditingId] = useState(null)
+	const [form, setForm] = useState({ name: '', email: '', phone: '' })
+	const [customers, setCustomers] = useState([])
+	const [editingId, setEditingId] = useState(null)
 
-		// Table controls
-		const [searchQuery, setSearchQuery] = useState('')
-		const [sortBy, setSortBy] = useState('name')
-		const [sortOrder, setSortOrder] = useState('asc')
-		const [currentPage, setCurrentPage] = useState(1)
-		const [pageSize, setPageSize] = useState(10)
+	// Table controls
+	const [searchQuery, setSearchQuery] = useState('')
+	const [sortBy, setSortBy] = useState('name')
+	const [sortOrder, setSortOrder] = useState('asc')
+	const [currentPage, setCurrentPage] = useState(1)
+	const [pageSize, setPageSize] = useState(10)
 
-		const sortOptions = [
-			{ value: 'name', label: 'Name' },
-			{ value: 'email', label: 'Email' },
-			{ value: 'phone', label: 'Phone' }
-		]
+	const sortOptions = [
+		{ value: 'name', label: 'Name' },
+		{ value: 'email', label: 'Email' },
+		{ value: 'phone', label: 'Phone' }
+	]
 
-		const filteredCustomers = useMemo(() => {
+	async function loadCustomers() {
+		try {
+			const res = await fetch(`${API}/api/customers`)
+			if (res.ok) {
+				const data = await res.json()
+				return data.map(c => ({ 
+					id: c._id || c.id, 
+					name: c.name, 
+					email: c.email, 
+					phone: c.phone, 
+					products: c.products 
+				}))
+			}
+			throw new Error('Failed to load customers')
+		} catch (e) {
+			console.error('Error loading customers:', e)
+			return []
+		}
+	}
+
+	const filteredCustomers = useMemo(() => {
 			const q = (searchQuery || '').toLowerCase()
 			return customers
 				.filter(c => {
@@ -85,20 +83,46 @@ export default function AddCustomer() {
 		return null
 	}
 
+	async function checkDuplicatePhone(phone, excludeId = null) {
+		try {
+			const currentCustomers = await loadCustomers()
+			return currentCustomers.some(c => 
+				c.phone === phone && (!excludeId || c.id !== excludeId)
+			)
+		} catch (e) {
+			console.error('Error checking duplicate phone:', e)
+			return false
+		}
+	}
+
 	async function handleSubmit(e) {
 		e.preventDefault()
 		const err = validate(form)
 		if (err) return toast.error(err)
 
+		// Check for duplicate phone
+		const isDuplicatePhone = await checkDuplicatePhone(form.phone, editingId)
+		if (isDuplicatePhone) {
+			return toast.error('Phone number already registered')
+		}
+
 		try {
-			// Try server
 			const payload = { name: form.name, email: form.email, phone: form.phone }
 			let res
 			if (editingId) {
-				res = await fetch(`${API}/api/customers/${editingId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+				res = await fetch(`${API}/api/customers/${editingId}`, { 
+					method: 'PUT', 
+					headers: { 'Content-Type': 'application/json' }, 
+					body: JSON.stringify(payload) 
+				})
 			} else {
-				res = await fetch(`${API}/api/customers`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+				res = await fetch(`${API}/api/customers`, { 
+					method: 'POST', 
+					headers: { 'Content-Type': 'application/json' }, 
+					body: JSON.stringify(payload) 
+				})
 			}
+
 			if (res.ok) {
 				const saved = await res.json()
 				// refresh list from server
@@ -110,35 +134,11 @@ export default function AddCustomer() {
 				return
 			}
 
-			// fallback to localStorage if server returns non-ok
-			console.warn('Server returned error creating customer, falling back to localStorage')
+			const text = await res.text()
+			toast.error(text || 'Failed to save customer')
 		} catch (err) {
-			console.warn('Server unreachable, falling back to localStorage', err)
-		}
-
-		// LocalStorage fallback
-		try {
-			const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-			if (editingId) {
-				const index = list.findIndex(c => c.id === editingId)
-				if (index === -1) throw new Error('Customer not found')
-				list[index] = { ...list[index], ...form }
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-				setCustomers(list)
-				setEditingId(null)
-				toast.success('Customer updated (local)')
-			} else {
-				const id = Date.now().toString()
-				const newCustomer = { id, ...form }
-				list.push(newCustomer)
-				localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-				setCustomers(list)
-				toast.success('Customer added (local)')
-			}
-			setForm({ name: '', email: '', phone: '' })
-		} catch (err) {
-			console.error(err)
-			toast.error(editingId ? 'Failed to update customer' : 'Failed to save customer')
+			console.error('Error saving customer:', err)
+			toast.error('Failed to save customer')
 		}
 	}
 
@@ -147,42 +147,23 @@ export default function AddCustomer() {
 		setEditingId(customer.id)
 	}
 
-	function removeCustomer(id) {
+	async function removeCustomer(id) {
 		if (!window.confirm('Delete this customer?')) return
-		;(async () => {
-			// If id doesn't look like a Mongo ObjectId, treat as local-only
-			const isObjectId = /^[a-fA-F0-9]{24}$/.test(id)
-			if (!isObjectId) {
-				try {
-					const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id)
-					localStorage.setItem(STORAGE_KEY, JSON.stringify(list))
-					setCustomers(list)
-					toast.success('Customer deleted (local)')
-				} catch (e) {
-					console.error('Local delete failed', e)
-					toast.error('Failed to delete customer')
-				}
-				return
+		
+		try {
+			const res = await fetch(`${API}/api/customers/${id}`, { method: 'DELETE' })
+			if (res.ok) {
+				setCustomers(cs => cs.filter(c => c.id !== id))
+				toast.success('Customer deleted')
+			} else {
+				const text = await res.text().catch(() => '')
+				console.error('Failed to delete customer:', text)
+				toast.error('Failed to delete customer')
 			}
-
-			try {
-				const res = await fetch(`${API}/api/customers/${id}`, { method: 'DELETE' })
-				if (res.ok) {
-					// remove from UI and localStorage if present
-					setCustomers(cs => cs.filter(c => c.id !== id))
-					try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)) } catch (e) {}
-					toast.success('Customer deleted')
-				} else {
-					const text = await res.text().catch(() => '')
-					console.warn('Server delete failed', text)
-					// fallback local delete
-					try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); setCustomers(list); toast.success('Customer deleted (local)') } catch (e) { toast.error('Failed to delete customer') }
-				}
-			} catch (err) {
-				console.warn('Network error during delete, falling back to local', err)
-				try { const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(c => c.id !== id); localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); setCustomers(list); toast.success('Customer deleted (local)') } catch (e) { toast.error('Failed to delete customer') }
-			}
-		})()
+		} catch (err) {
+			console.error('Error deleting customer:', err)
+			toast.error('Failed to delete customer')
+		}
 	}
 
 		return (

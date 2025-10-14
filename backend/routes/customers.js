@@ -12,6 +12,16 @@ router.post('/', async (req, res) => {
     res.status(201).json(c)
   } catch (err) {
     console.error(err)
+    if (err.code === 11000) {
+      // Handle duplicate key error
+      if (err.keyPattern.email) {
+        return res.status(400).json({ error: 'Email already exists' })
+      }
+      if (err.keyPattern.phone) {
+        return res.status(400).json({ error: 'Phone number already exists' })
+      }
+      return res.status(400).json({ error: 'Duplicate value not allowed' })
+    }
     res.status(400).json({ error: err.message })
   }
 })

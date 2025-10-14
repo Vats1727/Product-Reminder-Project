@@ -18,6 +18,25 @@ const customerProductMapSchema = new mongoose.Schema({
   dateAssigned: {
     type: Date,
     default: Date.now
+  },
+  // Product detail overrides
+  amount: {
+    type: Number
+  },
+  type: {
+    type: String,
+    enum: ['One-time', 'Recurring']
+  },
+  source: {
+    type: String,
+    enum: ['In-house', '3rd Party']
+  },
+  count: {
+    type: Number
+  },
+  period: {
+    type: String,
+    enum: ['Days', 'Months', 'Quarters', 'Years']
   }
 })
 

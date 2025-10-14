@@ -13,8 +13,16 @@ export default function CustomerProductMapping() {
     customerId: '',
     productId: '',
     remarks: '',
-    dateAssigned: ''
+    dateAssigned: '',
+    amount: '',
+    type: 'One-time',
+    count: 1,
+    period: 'Months',
+    source: 'In-house'
   })
+  
+  // State for editing product details in mapping
+  const [editingProductDetails, setEditingProductDetails] = useState(null)
   
   // Table controls
   const [searchQuery, setSearchQuery] = useState('')
@@ -111,6 +119,18 @@ export default function CustomerProductMapping() {
       return toast.error('Please select both customer and product')
     }
 
+    // Validate date is not in future
+    if (form.dateAssigned) {
+      const selectedDate = new Date(form.dateAssigned)
+      selectedDate.setHours(0, 0, 0, 0)
+      const today = new Date()
+      today.setHours(23, 59, 59, 999) // Set to end of today
+      
+      if (selectedDate > today) {
+        return toast.error('Date assigned cannot be in the future')
+      }
+    }
+
     try {
       const res = await fetch(`${API}/api/mappings`, {
         method: 'POST',
@@ -134,6 +154,19 @@ export default function CustomerProductMapping() {
   }
 
   async function handleUpdateRemarks(mappingId, remarks) {
+    // Validate date is not in future
+    if (editingRemarksDate) {
+      const selectedDate = new Date(editingRemarksDate)
+      selectedDate.setHours(0, 0, 0, 0)
+      const today = new Date()
+      today.setHours(23, 59, 59, 999) // Set to end of today
+      
+      if (selectedDate > today) {
+        toast.error('Date assigned cannot be in the future')
+        return
+      }
+    }
+
     try {
       const res = await fetch(`${API}/api/mappings/${mappingId}`, {
         method: 'PUT',
@@ -226,7 +259,12 @@ export default function CustomerProductMapping() {
 
           <label>
             Date Assigned
-            <input type="date" value={form.dateAssigned} onChange={e => setForm(f => ({ ...f, dateAssigned: e.target.value }))} />
+            <input 
+              type="date" 
+              value={form.dateAssigned} 
+              onChange={e => setForm(f => ({ ...f, dateAssigned: e.target.value }))}
+              max={new Date().toISOString().split('T')[0]}
+            />
           </label>
 
           <div className="form-actions">
@@ -274,11 +312,150 @@ export default function CustomerProductMapping() {
                     <td>{m.customerId?.name}</td>
                     <td>{m.productId?.productName}</td>
                     <td>
-                      <div>Amount: ${m.productId?.amount}</div>
-                      <div>Type: {m.productId?.type}</div>
-                      <div>Source: {m.productId?.source}</div>
-                      {m.productId?.type === 'Recurring' && (
-                        <div>Period: {m.productId?.count} {m.productId?.period}</div>
+                      {editingProductDetails === m._id ? (
+                        <div className="edit-product-details">
+                          <div>
+                            <label>Amount: $
+                              <input
+                                type="number"
+                                value={m.amount || m.productId?.amount}
+                                onChange={e => setMappings(prev => 
+                                  prev.map(mp => mp._id === m._id ? 
+                                    {...mp, amount: e.target.value} : mp
+                                  )
+                                )}
+                              />
+                            </label>
+                          </div>
+                          <div>
+                            <label>Type:
+                              <select
+                                value={m.type || m.productId?.type}
+                                onChange={e => {
+                                  const newType = e.target.value;
+                                  setMappings(prev => 
+                                    prev.map(mp => mp._id === m._id ? 
+                                      {...mp, type: newType} : mp
+                                    )
+                                  )
+                                }}
+                              >
+                                <option>One-time</option>
+                                <option>Recurring</option>
+                              </select>
+                            </label>
+                          </div>
+                          <div>
+                            <label>Source:
+                              <select
+                                value={m.source || m.productId?.source}
+                                onChange={e => setMappings(prev => 
+                                  prev.map(mp => mp._id === m._id ? 
+                                    {...mp, source: e.target.value} : mp
+                                  )
+                                )}
+                              >
+                                <option>In-house</option>
+                                <option>3rd Party</option>
+                              </select>
+                            </label>
+                          </div>
+                          {(m.type || m.productId?.type) === 'Recurring' && (
+                            <>
+                              <div>
+                                <label>Count:
+                                  <input
+                                    type="number"
+                                    value={m.count || m.productId?.count}
+                                    onChange={e => setMappings(prev => 
+                                      prev.map(mp => mp._id === m._id ? 
+                                        {...mp, count: e.target.value} : mp
+                                      )
+                                    )}
+                                  />
+                                </label>
+                              </div>
+                              <div>
+                                <label>Period:
+                                  <select
+                                    value={m.period || m.productId?.period}
+                                    onChange={e => setMappings(prev => 
+                                      prev.map(mp => mp._id === m._id ? 
+                                        {...mp, period: e.target.value} : mp
+                                      )
+                                    )}
+                                  >
+                                    <option>Days</option>
+                                    <option>Months</option>
+                                    <option>Quarters</option>
+                                    <option>Years</option>
+                                  </select>
+                                </label>
+                              </div>
+                            </>
+                          )}
+                          <div className="edit-actions" style={{ marginTop: '10px' }}>
+                            <button 
+                              className="btn-primary" 
+                              onClick={async () => {
+                                const updatedData = {
+                                  amount: m.amount || m.productId?.amount,
+                                  type: m.type || m.productId?.type,
+                                  source: m.source || m.productId?.source,
+                                  count: m.count || m.productId?.count,
+                                  period: m.period || m.productId?.period
+                                };
+                                
+                                try {
+                                  const res = await fetch(`${API}/api/mappings/${m._id}/details`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(updatedData)
+                                  });
+                                  
+                                  if (res.ok) {
+                                    toast.success('Product details updated');
+                                    setEditingProductDetails(null);
+                                  } else {
+                                    throw new Error('Failed to update product details');
+                                  }
+                                } catch (err) {
+                                  console.error('Error updating product details:', err);
+                                  toast.error('Failed to update product details');
+                                }
+                              }}
+                            >
+                              Save
+                            </button>
+                            <button 
+                              className="btn-ghost" 
+                              onClick={() => {
+                                setEditingProductDetails(null);
+                                // Reset any unsaved changes
+                                loadData();
+                              }}
+                              style={{ marginLeft: '8px' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div>Amount: ${m.amount || m.productId?.amount}</div>
+                          <div>Type: {m.type || m.productId?.type}</div>
+                          <div>Source: {m.source || m.productId?.source}</div>
+                          {(m.type || m.productId?.type) === 'Recurring' && (
+                            <div>Period: {m.count || m.productId?.count} {m.period || m.productId?.period}</div>
+                          )}
+                          <button 
+                            className="btn-ghost" 
+                            onClick={() => setEditingProductDetails(m._id)}
+                            style={{ marginTop: '8px' }}
+                          >
+                            Edit Details
+                          </button>
+                        </div>
                       )}
                     </td>
                     <td>
@@ -288,7 +465,12 @@ export default function CustomerProductMapping() {
                           <div style={{ marginTop: 6 }}>
                             <label style={{ display: 'block', marginBottom: 6 }}>
                               Date Assigned
-                              <input type="date" value={editingRemarksDate} onChange={e => setEditingRemarksDate(e.target.value)} />
+                              <input 
+                                type="date" 
+                                value={editingRemarksDate} 
+                                onChange={e => setEditingRemarksDate(e.target.value)}
+                                max={new Date().toISOString().split('T')[0]}
+                              />
                             </label>
                             <button className="btn-primary" onClick={async () => {
                               await handleUpdateRemarks(m._id, editingRemarks)

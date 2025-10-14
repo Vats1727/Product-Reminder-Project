@@ -3,16 +3,20 @@ import { toast } from 'react-toastify'
 import TableControls from './TableControls'
 import './table-controls.css'
 
-const CUSTOMER_KEY = 'ss_customers'
-const PRODUCT_KEY = 'ss_products'
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 async function fetchCustomers() {
   try {
     const res = await fetch(`${API}/api/customers`)
-    if (res.ok) return (await res.json()).map(c => ({ id: c._id || c.id, name: c.name, email: c.email }))
-  } catch (e) {}
-  try { return JSON.parse(localStorage.getItem(CUSTOMER_KEY) || '[]') } catch { return [] }
+    if (res.ok) {
+      const data = await res.json()
+      return data.map(c => ({ id: c._id || c.id, name: c.name, email: c.email }))
+    }
+    throw new Error('Failed to fetch customers')
+  } catch (e) {
+    console.error('Error loading customers:', e)
+    return []
+  }
 }
 
 async function fetchProducts() {
@@ -20,7 +24,6 @@ async function fetchProducts() {
     const res = await fetch(`${API}/api/products`)
     if (res.ok) {
       const data = await res.json()
-      // Normalize: if product.customers populated, use first customer's _id as customerId
       return data.map(p => ({
         id: p._id || p.id,
         productName: p.productName,
@@ -33,8 +36,11 @@ async function fetchProducts() {
         customerId: Array.isArray(p.customers) && p.customers.length ? (p.customers[0]._id || p.customers[0].id) : p.customerId || ''
       }))
     }
-  } catch (e) {}
-  try { return JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]') } catch { return [] }
+    throw new Error('Failed to fetch products')
+  } catch (e) {
+    console.error('Error loading products:', e)
+    return []
+  }
 }
 
 export default function AddProduct() {
@@ -144,23 +150,8 @@ export default function AddProduct() {
       const text = await res.text()
       throw new Error(text || 'Server error')
     } catch (err) {
-      console.warn('Server error, saving locally', err)
-      // fallback to local
-      try {
-        const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]')
-        if (editingId) {
-          const idx = list.findIndex(p => p.id === editingId)
-          if (idx !== -1) list[idx] = { ...list[idx], ...form }
-        } else {
-          list.unshift({ id: Date.now().toString(), ...form })
-        }
-        localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
-        setProducts(list)
-        toast.success('Saved locally')
-      } catch (e) {
-        console.error('Local save failed', e)
-        toast.error('Failed to save')
-      }
+      console.error('Error saving product:', err)
+      toast.error('Failed to save product')
     }
   }
 
@@ -171,40 +162,23 @@ export default function AddProduct() {
     setEditingId(product.id)
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     if (!window.confirm('Delete this product?')) return
-    ;(async () => {
-      // If id doesn't look like a Mongo ObjectId, treat as local-only
-      const isObjectId = /^[a-fA-F0-9]{24}$/.test(id)
-      if (!isObjectId) {
-        try {
-          const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id)
-          localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
-          setProducts(list)
-          toast.success('Product deleted (local)')
-        } catch (e) {
-          console.error('Local delete failed', e)
-          toast.error('Failed to delete product')
-        }
-        return
+    
+    try {
+      const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        setProducts(ps => ps.filter(p => p.id !== id))
+        toast.success('Product deleted')
+      } else {
+        const text = await res.text().catch(() => '')
+        console.error('Failed to delete product:', text)
+        toast.error('Failed to delete product')
       }
-
-      try {
-        const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE' })
-        if (res.ok) {
-          setProducts(ps => ps.filter(p => p.id !== id))
-          try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)) } catch (e) {}
-          toast.success('Product deleted')
-        } else {
-          const text = await res.text().catch(() => '')
-          console.warn('Server delete failed', text)
-          try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)); setProducts(list); toast.success('Product deleted (local)') } catch (e) { toast.error('Failed to delete product') }
-        }
-      } catch (err) {
-        console.warn('Network error during delete, falling back to local', err)
-        try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)); setProducts(list); toast.success('Product deleted (local)') } catch (e) { toast.error('Failed to delete product') }
-      }
-    })()
+    } catch (err) {
+      console.error('Error deleting product:', err)
+      toast.error('Failed to delete product')
+    }
   }
 
   return (

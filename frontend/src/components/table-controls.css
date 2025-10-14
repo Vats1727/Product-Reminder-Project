@@ -117,7 +117,7 @@
   cursor: not-allowed;
 }
 .pagination-button.arrow-theme:hover:not(:disabled) {
-  background: linear-gradient(90deg, #1565c0 60%, #388e3c 100%);
+  background:rgba(25, 118, 210, 0.12);
   transform: scale(1.08);
 }
 
