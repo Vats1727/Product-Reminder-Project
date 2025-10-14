@@ -23,6 +23,10 @@ export default function Sidebar({ collapsed, setCollapsed }) {
           <span className="nav-icon">🔗</span>
           <span>Map Products</span>
         </Link>
+        <Link to="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}>
+          <span className="nav-icon">📊</span>
+          <span>Dashboard</span>
+        </Link>
       </nav>
       <button className="collapse-button" onClick={toggleCollapse}>
         ➡️

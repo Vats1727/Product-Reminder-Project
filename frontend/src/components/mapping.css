@@ -1,0 +1,59 @@
+/* mapping.css - reused styles for dashboard and mapping page */
+
+.mapping-remarks-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(17,77,58,0.15);
+  border-radius: 8px;
+  background: #fff;
+  color: #163b2e;
+  box-shadow: 0 1px 2px rgba(17,77,58,0.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.06s ease;
+  resize: vertical;
+  font-size: 14px;
+}
+
+.mapping-remarks-textarea:focus {
+  outline: none;
+  border-color: #114d3a;
+  box-shadow: 0 6px 18px rgba(17,77,58,0.08);
+  transform: translateY(-1px);
+}
+
+.mapping-date-input {
+  display: block;
+  width: 100%;
+  max-width: 220px;
+  padding: 8px 10px;
+  border: 1px solid rgba(17,77,58,0.15);
+  border-radius: 8px;
+  background: linear-gradient(180deg,#ffffff,#fbfffb);
+  color: #163b2e;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.06s ease;
+}
+
+.mapping-date-input:focus {
+  outline: none;
+  border-color: #0e3f31;
+  box-shadow: 0 8px 22px rgba(16,64,48,0.09);
+  transform: translateY(-1px);
+}
+
+.mapping-date-input:focus::-webkit-calendar-picker-indicator {
+  filter: hue-rotate(80deg) saturate(120%) brightness(0.9);
+}
+
+.mapping-inline-controls {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mapping-inline-controls .btn-primary {
+  padding: 6px 10px;
+}
+
+.mapping-inline-controls .btn-ghost {
+  padding: 6px 10px;
+}
