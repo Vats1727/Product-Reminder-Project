@@ -12,6 +12,7 @@ export default function Dashboard() {
   const [sortOrder, setSortOrder] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize] = useState(10)
+  const [duePeriodFilter, setDuePeriodFilter] = useState('')
 
   useEffect(() => { loadMappings() }, [])
 
@@ -27,8 +28,7 @@ export default function Dashboard() {
     }
   }
 
-  function formatRemaining(mapping) {
-    // Calculate due period from mapping/product
+  function getDuePeriod(mapping) {
     const now = new Date()
     let expiry = null
     const p = mapping.productId
@@ -37,7 +37,34 @@ export default function Dashboard() {
     if ((mapping.type || p.type) === 'One-time') {
       expiry = start
     } else {
-      // Recurring: add count * period
+      let count = mapping.count || p.count || 1
+      let period = mapping.period || p.period || 'Months'
+      expiry = new Date(start)
+      if (period === 'Days') expiry.setDate(expiry.getDate() + count)
+      else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
+      else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
+    }
+    if (expiry < now) return 'Expired'
+    let years = expiry.getFullYear() - now.getFullYear()
+    let months = expiry.getMonth() - now.getMonth()
+    let days = expiry.getDate() - now.getDate()
+    if (days < 0) { const prevMonth = new Date(expiry.getFullYear(), expiry.getMonth(), 0); days += prevMonth.getDate(); months -= 1 }
+    if (months < 0) { months += 12; years -= 1 }
+    if (years > 0) return 'Years'
+    if (months > 0) return 'Months'
+    if (days > 0) return 'Days'
+    return 'Today'
+  }
+
+  function formatRemaining(mapping) {
+    const now = new Date()
+    let expiry = null
+    const p = mapping.productId
+    const start = mapping.dateAssigned ? new Date(mapping.dateAssigned) : null
+    if (!start || !p) return ''
+    if ((mapping.type || p.type) === 'One-time') {
+      expiry = start
+    } else {
       let count = mapping.count || p.count || 1
       let period = mapping.period || p.period || 'Months'
       expiry = new Date(start)
@@ -58,6 +85,26 @@ export default function Dashboard() {
     return parts.length ? parts.join(', ') : 'Today'
   }
 
+  function getDuePeriodValue(mapping) {
+    const now = new Date()
+    let expiry = null
+    const p = mapping.productId
+    const start = mapping.dateAssigned ? new Date(mapping.dateAssigned) : null
+    if (!start || !p) return Infinity
+    if ((mapping.type || p.type) === 'One-time') {
+      expiry = start
+    } else {
+      let count = mapping.count || p.count || 1
+      let period = mapping.period || p.period || 'Months'
+      expiry = new Date(start)
+      if (period === 'Days') expiry.setDate(expiry.getDate() + count)
+      else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
+      else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
+    }
+    if (expiry < now) return -1 // Expired
+    return expiry.getTime() - now.getTime()
+  }
+
   const sortOptions = [
     { value: 'customer', label: 'Customer' },
     { value: 'product', label: 'Product' },
@@ -71,25 +118,31 @@ export default function Dashboard() {
         if (!q) return true
         return (m.customerId?.name || '').toLowerCase().includes(q) || (m.productId?.productName || '').toLowerCase().includes(q) || (m.remarks || '').toLowerCase().includes(q)
       })
+      .filter(m => {
+        if (!duePeriodFilter) return true
+        const period = getDuePeriod(m)
+        return period === duePeriodFilter
+      })
       .sort((a, b) => {
         if (!sortBy) return 0
         let A, B
         if (sortBy === 'customer') {
           A = (a.customerId?.name || '').toLowerCase()
           B = (b.customerId?.name || '').toLowerCase()
+          return A.localeCompare(B) * (sortOrder === 'asc' ? 1 : -1)
         } else if (sortBy === 'product') {
           A = (a.productId?.productName || '').toLowerCase()
           B = (b.productId?.productName || '').toLowerCase()
+          return A.localeCompare(B) * (sortOrder === 'asc' ? 1 : -1)
         } else if (sortBy === 'expiry') {
-          A = formatRemaining(a)
-          B = formatRemaining(b)
+          A = getDuePeriodValue(a)
+          B = getDuePeriodValue(b)
+          return (A - B) * (sortOrder === 'asc' ? 1 : -1)
         } else {
-          A = ''
-          B = ''
+          return 0
         }
-        return A.localeCompare(B) * (sortOrder === 'asc' ? 1 : -1)
       })
-  }, [mappings, searchQuery, sortBy, sortOrder])
+  }, [mappings, searchQuery, sortBy, sortOrder, duePeriodFilter])
 
   const paginatedMappings = useMemo(() => {
     const start = (currentPage - 1) * pageSize
@@ -104,6 +157,18 @@ export default function Dashboard() {
     <div className="page-content">
       <div className="page-header"><h2>Dashboard</h2></div>
       <section>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
+          <label>Due Period
+            <select value={duePeriodFilter} onChange={e => { setDuePeriodFilter(e.target.value); setCurrentPage(1) }}>
+              <option value="">All</option>
+              <option value="Days">Days</option>
+              <option value="Months">Months</option>
+              <option value="Years">Years</option>
+              <option value="Today">Today</option>
+              <option value="Expired">Expired</option>
+            </select>
+          </label>
+        </div>
         <TableControls
           searchQuery={searchQuery}
           onSearchChange={handleSearch}
