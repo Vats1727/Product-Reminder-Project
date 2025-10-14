@@ -3,6 +3,22 @@
   height: 100%;
 }
 
+.admin-root {
+  display: flex;
+  min-height: 100vh;
+  background: #f6f6f8;
+}
+
+.admin-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 32px 24px;
+  transition: margin-left 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+.sidebar-collapsed .admin-main {
+  margin-left: 80px;
+}
 .logo {
   height: 6em;
   padding: 1.5em;

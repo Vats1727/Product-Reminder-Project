@@ -1,5 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { toast } from 'react-toastify'
+import TableControls from './TableControls'
+import './table-controls.css'
 
 const CUSTOMER_KEY = 'ss_customers'
 const PRODUCT_KEY = 'ss_products'
@@ -39,7 +41,7 @@ export default function AddProduct() {
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState({ customerId: '', productName: '', amount: '', datePurchased: '', type: 'One-time', count: 1, period: 'Months', source: 'In-house' })
+  const [form, setForm] = useState({ productName: '', amount: '', type: 'One-time', count: 1, period: 'Months', source: 'In-house' })
 
   useEffect(() => {
     let mounted = true
@@ -47,22 +49,59 @@ export default function AddProduct() {
       if (!mounted) return
       setCustomers(cs)
       setProducts(ps)
-      if (cs.length && !form.customerId) setForm(f => ({ ...f, customerId: cs[0].id }))
     })
     return () => { mounted = false }
   }, [])
 
+  // Table controls state
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('productName')
+  const [sortOrder, setSortOrder] = useState('asc')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+
+  const sortOptions = [
+    { value: 'productName', label: 'Product Name' },
+    { value: 'amount', label: 'Amount' },
+    { value: 'type', label: 'Type' },
+    { value: 'source', label: 'Source' }
+  ]
+
+  const filteredProducts = useMemo(() => {
+    const q = (searchQuery || '').toLowerCase()
+    return products
+      .filter(p => {
+        if (!q) return true
+        return p.productName?.toLowerCase().includes(q) || p.type?.toLowerCase().includes(q) || String(p.amount || '').includes(q) || (p.source || '').toLowerCase().includes(q)
+      })
+      .sort((a, b) => {
+        if (!sortBy) return 0
+        if (sortBy === 'amount') return (Number(a.amount) - Number(b.amount)) * (sortOrder === 'asc' ? 1 : -1)
+        const A = String(a[sortBy] || '').toLowerCase()
+        const B = String(b[sortBy] || '').toLowerCase()
+        return A.localeCompare(B) * (sortOrder === 'asc' ? 1 : -1)
+      })
+  }, [products, searchQuery, sortBy, sortOrder])
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredProducts.slice(start, start + pageSize)
+  }, [filteredProducts, currentPage, pageSize])
+
+  const handleSort = (newSortBy, newSortOrder) => {
+    setSortBy(newSortBy || sortBy)
+    setSortOrder(newSortOrder || sortOrder)
+    setCurrentPage(1)
+  }
+
+  const handleSearch = (q) => { setSearchQuery(q); setCurrentPage(1) }
+  const handlePageChange = (p) => setCurrentPage(p)
+  const handlePageSizeChange = (s) => { setPageSize(s); setCurrentPage(1) }
+
   function validate(f) {
-    if (!f.customerId) return 'Select a customer'
     if (!f.productName?.trim()) return 'Product name is required'
     if (!f.amount || Number(f.amount) <= 0) return 'Enter a valid amount'
     if (f.type === 'Recurring' && (!f.count || Number(f.count) <= 0)) return 'Recurring count must be at least 1'
-    if (f.datePurchased) {
-      const selected = new Date(f.datePurchased)
-      const today = new Date()
-      today.setHours(0,0,0,0)
-      if (selected < today) return 'Date purchased cannot be in the past'
-    }
     return null
   }
 
@@ -173,23 +212,12 @@ export default function AddProduct() {
       <div className="page-header"><h2>Add Product</h2></div>
       <section>
         <form className="form-grid" onSubmit={handleSubmit}>
-          <label>Customer
-            <select value={form.customerId} onChange={e => setForm(f => ({ ...f, customerId: e.target.value }))}>
-              <option value="">-- select customer --</option>
-              {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </label>
-
           <label>Product Name
             <input value={form.productName} onChange={e => setForm(f => ({ ...f, productName: e.target.value }))} placeholder="Enter product name" />
           </label>
 
           <label>Amount
             <input type="number" value={form.amount} onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} placeholder="Enter amount" />
-          </label>
-
-          <label>Date Purchased
-            <input type="date" value={form.datePurchased} onChange={e => setForm(f => ({ ...f, datePurchased: e.target.value }))} />
           </label>
 
           <label>Type
@@ -229,20 +257,32 @@ export default function AddProduct() {
         </form>
 
         <div className="table-container">
+          <TableControls
+            searchQuery={searchQuery}
+            onSearchChange={handleSearch}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSort}
+            sortOptions={sortOptions}
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+            totalItems={filteredProducts.length}
+            currentPage={currentPage}
+            onPageChange={handlePageChange}
+          />
           <table className="table">
             <thead>
-              <tr className="table-header-row"><th>ID</th><th>Customer</th><th>Product Name</th><th>Amount</th><th>Date Purchased</th><th>Type</th><th>Source</th><th>Actions</th></tr>
+              <tr className="table-header-row"><th>No.</th><th>Product Name</th><th>Amount</th><th>Type</th><th>Source</th><th>Actions</th></tr>
             </thead>
             <tbody>
-              {products.length === 0 ? <tr><td colSpan={8} className="empty-row">No products found</td></tr> : products.map(p => {
-                const cust = customers.find(c => c.id === p.customerId)
-                return (
+              {paginatedProducts.length === 0 ? (
+                <tr><td colSpan={6} className="empty-row">No products found</td></tr>
+              ) : (
+                paginatedProducts.map((p, index) => (
                   <tr key={p.id}>
-                    <td>{p.id}</td>
-                    <td>{cust ? cust.name : 'Unknown Customer'}</td>
+                    <td>{(currentPage - 1) * pageSize + index + 1}</td>
                     <td>{p.productName}</td>
                     <td>{p.amount}</td>
-                    <td>{p.datePurchased ? new Date(p.datePurchased).toISOString().slice(0,10) : '\u2014'}</td>
                     <td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
                     <td>{p.source}</td>
                     <td>
@@ -250,8 +290,8 @@ export default function AddProduct() {
                       <button className="btn-ghost" onClick={() => handleDelete(p.id)}>Delete</button>
                     </td>
                   </tr>
-                )
-              })}
+                ))
+              )}
             </tbody>
           </table>
         </div>

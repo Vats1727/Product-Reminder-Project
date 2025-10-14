@@ -93,7 +93,7 @@ router.delete('/:id', async (req, res) => {
     }
     // remove this customer from any products
     await Product.updateMany({ _id: { $in: c.products } }, { $pull: { customers: c._id } })
-    await c.remove()
+    await Customer.deleteOne({ _id: id })
     console.log(`[customers:DELETE] deleted customer id=${id}`)
     res.json({ success: true, id })
   } catch (err) {

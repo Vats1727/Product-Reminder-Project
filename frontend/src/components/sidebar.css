@@ -9,6 +9,50 @@
   left: 0;
   top: 0;
   bottom: 0;
+  transition: width 0.3s ease;
+}
+
+.app-sidebar.collapsed {
+  width: 80px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: #fff;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.app-sidebar.collapsed .nav-item span:not(.nav-icon) {
+  display: none;
+}
+
+.nav-icon {
+  font-size: 20px;
+  min-width: 24px;
+  text-align: center;
+}
+
+.collapse-button {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 24px;
+  padding: 8px;
+  transition: transform 0.3s ease;
+}
+
+.app-sidebar.collapsed .collapse-button {
+  transform: translateX(-50%) rotate(180deg);
 }
 
 .brand {

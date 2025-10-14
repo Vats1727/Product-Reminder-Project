@@ -1,4 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
+import TableControls from './TableControls'
+import './table-controls.css'
 import { toast } from 'react-toastify'
 
 const STORAGE_KEY = 'ss_customers'
@@ -26,9 +28,47 @@ async function loadCustomers() {
 }
 
 export default function AddCustomer() {
-	const [form, setForm] = useState({ name: '', email: '', phone: '' })
-	const [customers, setCustomers] = useState([])
-	const [editingId, setEditingId] = useState(null)
+		const [form, setForm] = useState({ name: '', email: '', phone: '' })
+		const [customers, setCustomers] = useState([])
+		const [editingId, setEditingId] = useState(null)
+
+		// Table controls
+		const [searchQuery, setSearchQuery] = useState('')
+		const [sortBy, setSortBy] = useState('name')
+		const [sortOrder, setSortOrder] = useState('asc')
+		const [currentPage, setCurrentPage] = useState(1)
+		const [pageSize, setPageSize] = useState(10)
+
+		const sortOptions = [
+			{ value: 'name', label: 'Name' },
+			{ value: 'email', label: 'Email' },
+			{ value: 'phone', label: 'Phone' }
+		]
+
+		const filteredCustomers = useMemo(() => {
+			const q = (searchQuery || '').toLowerCase()
+			return customers
+				.filter(c => {
+					if (!q) return true
+					return (c.name || '').toLowerCase().includes(q) || (c.email || '').toLowerCase().includes(q) || (c.phone || '').toLowerCase().includes(q)
+				})
+				.sort((a, b) => {
+					if (!sortBy) return 0
+					const A = String(a[sortBy] || '').toLowerCase()
+					const B = String(b[sortBy] || '').toLowerCase()
+					return A.localeCompare(B) * (sortOrder === 'asc' ? 1 : -1)
+				})
+		}, [customers, searchQuery, sortBy, sortOrder])
+
+		const paginatedCustomers = useMemo(() => {
+			const start = (currentPage - 1) * pageSize
+			return filteredCustomers.slice(start, start + pageSize)
+		}, [filteredCustomers, currentPage, pageSize])
+
+		const handleSort = (newSortBy, newSortOrder) => { setSortBy(newSortBy || sortBy); setSortOrder(newSortOrder || sortOrder); setCurrentPage(1) }
+		const handleSearch = (q) => { setSearchQuery(q); setCurrentPage(1) }
+		const handlePageChange = (p) => setCurrentPage(p)
+		const handlePageSizeChange = (s) => { setPageSize(s); setCurrentPage(1) }
 
 	useEffect(() => {
 		let mounted = true
@@ -40,7 +80,7 @@ export default function AddCustomer() {
 		if (!f.name || !f.email || !f.phone) return 'Please fill all fields'
 		if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email)) return 'Invalid email'
 		const digits = (f.phone || '').replace(/\D/g, '')
-		if (!/^\+?[0-9\-\s]{7,20}$/.test(f.phone)) return 'Invalid phone format'
+		if (!/^\+?[0-9\-\s]{10,20}$/.test(f.phone)) return 'Invalid phone format'
 		if (digits.length > 10) return 'Phone number must be at most 10 digits'
 		return null
 	}
@@ -200,10 +240,24 @@ export default function AddCustomer() {
 						</div>
 					</form>
 
+						<TableControls
+						  searchQuery={searchQuery}
+						  onSearchChange={handleSearch}
+						  sortBy={sortBy}
+						  sortOrder={sortOrder}
+						  onSortChange={handleSort}
+						  sortOptions={sortOptions}
+						  pageSize={pageSize}
+						  onPageSizeChange={handlePageSizeChange}
+						  totalItems={filteredCustomers.length}
+						  currentPage={currentPage}
+						  onPageChange={handlePageChange}
+						/>
+
 						<table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
 							<thead>
 								<tr className="table-header-row">
-									<th>Customer Id</th>
+									<th>No.</th>
 									<th>Name</th>
 									<th>Email</th>
 									<th>Phone</th>
@@ -211,32 +265,33 @@ export default function AddCustomer() {
 								</tr>
 							</thead>
 							<tbody>
-								{customers.length === 0 && (
+								{paginatedCustomers.length === 0 ? (
 									<tr><td colSpan={5} className="empty-row">No customers found</td></tr>
+								) : (
+									paginatedCustomers.map((c, idx) => (
+										<tr key={c.id}>
+											<td>{(currentPage - 1) * pageSize + idx + 1}</td>
+											<td>{c.name}</td>
+											<td>{c.email}</td>
+											<td>{c.phone}</td>
+											<td>
+												<button 
+													className="btn-ghost" 
+													style={{ marginRight: 8 }} 
+													onClick={() => editCustomer(c)}
+												>
+													Edit
+												</button>
+												<button 
+													className="btn-ghost" 
+													onClick={() => removeCustomer(c.id)}
+												>
+													Delete
+												</button>
+											</td>
+										</tr>
+									))
 								)}
-								{customers.map((c) => (
-									<tr key={c.id}>
-										<td>{c.id}</td>
-										<td>{c.name}</td>
-										<td>{c.email}</td>
-										<td>{c.phone}</td>
-										<td>
-											<button 
-												className="btn-ghost" 
-												style={{ marginRight: 8 }} 
-												onClick={() => editCustomer(c)}
-											>
-												Edit
-											</button>
-											<button 
-												className="btn-ghost" 
-												onClick={() => removeCustomer(c.id)}
-											>
-												Delete
-											</button>
-										</td>
-									</tr>
-								))}
 							</tbody>
 						</table>
 			</section>

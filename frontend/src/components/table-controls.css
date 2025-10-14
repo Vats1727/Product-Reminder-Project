@@ -1,0 +1,129 @@
+  margin: 1rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-input,
+.sort-select,
+.sort-order-select,
+.page-size-select {
+  padding: 0.5rem;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  min-width: 120px;
+}
+
+.search-input {
+  min-width: 200px;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #000000;
+  background: rgb(0, 0, 0);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: #ca3f3f7c;
+}
+
+.pagination-info {
+  margin: 0 0.5rem;
+}
+.table-controls {
+  margin: 1.5rem 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  padding: 1rem 2rem;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-input,
+.sort-select,
+.sort-order-select {
+  padding: 0.6rem 1rem;
+  border: 1px solid #bdbdbd;
+  border-radius: 6px;
+  min-width: 140px;
+  font-size: 1rem;
+  background: #f6f6f8;
+  color: #213547;
+  transition: border-color 0.2s;
+}
+.search-input {
+  min-width: 220px;
+}
+.search-input:focus,
+.sort-select:focus,
+.sort-order-select:focus {
+  border-color: #1976d2;
+  outline: none;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pagination-button.arrow-theme {
+  padding: 0.5rem 1.2rem;
+  border: none;
+  background: linear-gradient(90deg, #1976d2 60%, #43a047 100%);
+  color: #fff;
+  border-radius: 50%;
+  font-size: 1.3rem;
+  box-shadow: 0 1px 4px rgba(25, 118, 210, 0.12);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.pagination-button.arrow-theme:disabled {
+  background: #bdbdbd;
+  color: #eee;
+  cursor: not-allowed;
+}
+.pagination-button.arrow-theme:hover:not(:disabled) {
+  background: linear-gradient(90deg, #1565c0 60%, #388e3c 100%);
+  transform: scale(1.08);
+}
+
+.pagination-info {
+  margin: 0 0.5rem;
+  font-size: 1rem;
+  color: #1976d2;
+  font-weight: 500;
