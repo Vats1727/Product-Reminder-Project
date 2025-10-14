@@ -8,6 +8,7 @@ import AdminLayout from './components/AdminLayout'
 import AddCustomer from './components/AddCustomer'
 import AddProduct from './components/AddProduct'
 import CustomerProductMapping from './components/CustomerProductMapping'
+import Dashboard from './components/Dashboard'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/add-customer" element={<AddCustomer />} />
           <Route path="/add-product" element={<AddProduct />} />
           <Route path="/map-products" element={<CustomerProductMapping />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/" element={<Navigate to="/add-customer" replace />} />
         </Routes>
       </AdminLayout>
