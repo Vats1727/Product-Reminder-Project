@@ -84,12 +84,18 @@ router.put('/:id', async (req, res) => {
 // Delete customer and unlink from products
 router.delete('/:id', async (req, res) => {
   try {
-    const c = await Customer.findById(req.params.id)
-    if (!c) return res.status(404).json({ error: 'Not found' })
+    const id = req.params.id
+    console.log(`[customers:DELETE] request to delete customer id=${id}`)
+    const c = await Customer.findById(id)
+    if (!c) {
+      console.log(`[customers:DELETE] customer not found id=${id}`)
+      return res.status(404).json({ error: 'Not found' })
+    }
     // remove this customer from any products
     await Product.updateMany({ _id: { $in: c.products } }, { $pull: { customers: c._id } })
     await c.remove()
-    res.json({ success: true })
+    console.log(`[customers:DELETE] deleted customer id=${id}`)
+    res.json({ success: true, id })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to delete' })

@@ -38,12 +38,18 @@ router.get('/', async (req, res) => {
 // Delete product and unlink from customers
 router.delete('/:id', async (req, res) => {
   try {
-    const p = await Product.findById(req.params.id)
-    if (!p) return res.status(404).json({ error: 'Not found' })
+    const id = req.params.id
+    console.log(`[products:DELETE] request to delete product id=${id}`)
+    const p = await Product.findById(id)
+    if (!p) {
+      console.log(`[products:DELETE] product not found id=${id}`)
+      return res.status(404).json({ error: 'Not found' })
+    }
     // remove from customers
     await Customer.updateMany({ _id: { $in: p.customers } }, { $pull: { products: p._id } })
     await p.remove()
-    res.json({ success: true })
+    console.log(`[products:DELETE] deleted product id=${id}`)
+    res.json({ success: true, id })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Failed to delete' })

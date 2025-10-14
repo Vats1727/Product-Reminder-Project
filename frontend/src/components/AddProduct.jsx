@@ -57,6 +57,12 @@ export default function AddProduct() {
     if (!f.productName?.trim()) return 'Product name is required'
     if (!f.amount || Number(f.amount) <= 0) return 'Enter a valid amount'
     if (f.type === 'Recurring' && (!f.count || Number(f.count) <= 0)) return 'Recurring count must be at least 1'
+    if (f.datePurchased) {
+      const selected = new Date(f.datePurchased)
+      const today = new Date()
+      today.setHours(0,0,0,0)
+      if (selected < today) return 'Date purchased cannot be in the past'
+    }
     return null
   }
 
@@ -128,12 +134,38 @@ export default function AddProduct() {
 
   function handleDelete(id) {
     if (!window.confirm('Delete this product?')) return
-    // optimistic local delete (server delete endpoint exists)
-    setProducts(ps => ps.filter(p => p.id !== id))
-    // remove from localStorage as well
-    try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)) } catch (e) {}
-    // call server delete
-    fetch(`${API}/api/products/${id}`, { method: 'DELETE' }).catch(() => {})
+    ;(async () => {
+      // If id doesn't look like a Mongo ObjectId, treat as local-only
+      const isObjectId = /^[a-fA-F0-9]{24}$/.test(id)
+      if (!isObjectId) {
+        try {
+          const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id)
+          localStorage.setItem(PRODUCT_KEY, JSON.stringify(list))
+          setProducts(list)
+          toast.success('Product deleted (local)')
+        } catch (e) {
+          console.error('Local delete failed', e)
+          toast.error('Failed to delete product')
+        }
+        return
+      }
+
+      try {
+        const res = await fetch(`${API}/api/products/${id}`, { method: 'DELETE' })
+        if (res.ok) {
+          setProducts(ps => ps.filter(p => p.id !== id))
+          try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)) } catch (e) {}
+          toast.success('Product deleted')
+        } else {
+          const text = await res.text().catch(() => '')
+          console.warn('Server delete failed', text)
+          try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)); setProducts(list); toast.success('Product deleted (local)') } catch (e) { toast.error('Failed to delete product') }
+        }
+      } catch (err) {
+        console.warn('Network error during delete, falling back to local', err)
+        try { const list = JSON.parse(localStorage.getItem(PRODUCT_KEY) || '[]').filter(p => p.id !== id); localStorage.setItem(PRODUCT_KEY, JSON.stringify(list)); setProducts(list); toast.success('Product deleted (local)') } catch (e) { toast.error('Failed to delete product') }
+      }
+    })()
   }
 
   return (
