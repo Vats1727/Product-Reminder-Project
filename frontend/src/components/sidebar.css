@@ -203,7 +203,7 @@
 .empty-row {
   text-align: center;
   padding: 32px;
-  color: #666;
+  color: #000000;
   background: #fafafa;
 }
 
@@ -250,10 +250,9 @@
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.2s;
   flex-shrink: 0;
 }
 
 .btn-primary:hover {
-  background: #114d3a;
+  background: #000000;
 }

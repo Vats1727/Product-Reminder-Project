@@ -254,6 +254,7 @@ export default function CustomerProductMapping() {
               onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))}
               placeholder="Enter any remarks..."
               rows={3}
+              style={{resize: 'none', width: '220px', height:'10px', color:'black'}}
             />
           </label>
 

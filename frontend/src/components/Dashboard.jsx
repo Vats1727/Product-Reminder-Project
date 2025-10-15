@@ -28,22 +28,38 @@ export default function Dashboard() {
     }
   }
 
+  // choose start date: prefer product.datePurchased, fallback to mapping.dateAssigned
+  function getStartDate(mapping) {
+    const p = mapping.productId || {}
+    if (p.datePurchased) return new Date(p.datePurchased)
+    if (mapping.dateAssigned) return new Date(mapping.dateAssigned)
+    return null
+  }
+
+  function getExpiryDate(mapping) {
+    const start = getStartDate(mapping)
+    const p = mapping.productId || {}
+    if (!start || !p) return null
+
+    if ((mapping.type || p.type) === 'One-time') {
+      // For one-time, expiry is the start/purchase date
+      return new Date(start)
+    }
+
+    // Recurring: add count * period to start
+    const count = Number(mapping.count ?? p.count ?? 1)
+    const period = (mapping.period || p.period || 'Months')
+    const expiry = new Date(start)
+    if (period === 'Days') expiry.setDate(expiry.getDate() + count)
+    else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
+    else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
+    return expiry
+  }
+
   function getDuePeriod(mapping) {
     const now = new Date()
-    let expiry = null
-    const p = mapping.productId
-    const start = mapping.dateAssigned ? new Date(mapping.dateAssigned) : null
-    if (!start || !p) return ''
-    if ((mapping.type || p.type) === 'One-time') {
-      expiry = start
-    } else {
-      let count = mapping.count || p.count || 1
-      let period = mapping.period || p.period || 'Months'
-      expiry = new Date(start)
-      if (period === 'Days') expiry.setDate(expiry.getDate() + count)
-      else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
-      else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
-    }
+    const expiry = getExpiryDate(mapping)
+    if (!expiry) return ''
     if (expiry < now) return 'Expired'
     let years = expiry.getFullYear() - now.getFullYear()
     let months = expiry.getMonth() - now.getMonth()
@@ -58,20 +74,8 @@ export default function Dashboard() {
 
   function formatRemaining(mapping) {
     const now = new Date()
-    let expiry = null
-    const p = mapping.productId
-    const start = mapping.dateAssigned ? new Date(mapping.dateAssigned) : null
-    if (!start || !p) return ''
-    if ((mapping.type || p.type) === 'One-time') {
-      expiry = start
-    } else {
-      let count = mapping.count || p.count || 1
-      let period = mapping.period || p.period || 'Months'
-      expiry = new Date(start)
-      if (period === 'Days') expiry.setDate(expiry.getDate() + count)
-      else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
-      else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
-    }
+    const expiry = getExpiryDate(mapping)
+    if (!expiry) return ''
     if (expiry < now) return 'Expired'
     let years = expiry.getFullYear() - now.getFullYear()
     let months = expiry.getMonth() - now.getMonth()
@@ -87,20 +91,8 @@ export default function Dashboard() {
 
   function getDuePeriodValue(mapping) {
     const now = new Date()
-    let expiry = null
-    const p = mapping.productId
-    const start = mapping.dateAssigned ? new Date(mapping.dateAssigned) : null
-    if (!start || !p) return Infinity
-    if ((mapping.type || p.type) === 'One-time') {
-      expiry = start
-    } else {
-      let count = mapping.count || p.count || 1
-      let period = mapping.period || p.period || 'Months'
-      expiry = new Date(start)
-      if (period === 'Days') expiry.setDate(expiry.getDate() + count)
-      else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
-      else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
-    }
+    const expiry = getExpiryDate(mapping)
+    if (!expiry) return Infinity
     if (expiry < now) return -1 // Expired
     return expiry.getTime() - now.getTime()
   }
@@ -108,8 +100,20 @@ export default function Dashboard() {
   const sortOptions = [
     { value: 'customer', label: 'Customer' },
     { value: 'product', label: 'Product' },
-    { value: 'expiry', label: 'Due Period' }
+    { value: 'expiry', label: 'Due Period' },
+    { value: 'One-time', label: 'One-time' },
+    { value: 'Recurring', label: 'Recurring' }
   ]
+
+  function formatDate(d) {
+    if (!d) return ''
+    const dt = new Date(d)
+    if (isNaN(dt)) return ''
+    const dd = String(dt.getDate()).padStart(2, '0')
+    const mm = String(dt.getMonth() + 1).padStart(2, '0')
+    const yyyy = dt.getFullYear()
+    return `${dd}-${mm}-${yyyy}`
+  }
 
   const processedMappings = useMemo(() => {
     const q = (searchQuery || '').toLowerCase()
@@ -138,6 +142,14 @@ export default function Dashboard() {
           A = getDuePeriodValue(a)
           B = getDuePeriodValue(b)
           return (A - B) * (sortOrder === 'asc' ? 1 : -1)
+        } else if (sortBy === 'One-time' || sortBy === 'Recurring') {
+          // Sort by matching product/mapping type. Matching items come first in 'asc', last in 'desc'.
+          const target = sortBy
+          const aType = (a.type || a.productId?.type || '').toString()
+          const bType = (b.type || b.productId?.type || '').toString()
+          const aMatch = aType === target ? 0 : 1
+          const bMatch = bType === target ? 0 : 1
+          return (aMatch - bMatch) * (sortOrder === 'asc' ? 1 : -1)
         } else {
           return 0
         }
@@ -187,6 +199,7 @@ export default function Dashboard() {
                 <th>#</th>
                 <th>Customer</th>
                 <th>Product</th>
+                <th>Purchase</th>
                 <th>Expiry</th>
                 <th>Due Period</th>
                 <th>Details</th>
@@ -203,7 +216,8 @@ export default function Dashboard() {
                       <td>{(currentPage - 1) * pageSize + i + 1}</td>
                       <td>{m.customerId?.name}</td>
                       <td>{p.productName}</td>
-                      <td>{m.dateAssigned ? new Date(m.dateAssigned).toISOString().slice(0,10) : ''}</td>
+                      <td>{formatDate(p.datePurchased || m.dateAssigned)}</td>
+                      <td>{formatDate(getExpiryDate(m))}</td>
                       <td>{formatRemaining(m)}</td>
                       <td>Amount: ${m.amount || p.amount} | Type: {m.type || p.type} | Source: {m.source || p.source}</td>
                     </tr>

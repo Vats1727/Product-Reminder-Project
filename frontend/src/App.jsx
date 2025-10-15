@@ -15,11 +15,11 @@ export default function App() {
     <BrowserRouter>
       <AdminLayout>
         <Routes>
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/add-customer" element={<AddCustomer />} />
           <Route path="/add-product" element={<AddProduct />} />
           <Route path="/map-products" element={<CustomerProductMapping />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/" element={<Navigate to="/add-customer" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </AdminLayout>
       <ToastContainer 
