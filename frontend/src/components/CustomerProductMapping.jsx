@@ -606,7 +606,7 @@ export default function CustomerProductMapping() {
                                     </span>
                                   ) : (
                                     <>
-                                      <button className="btn-ghost" style={{ marginRight: 8 }} onClick={() => setEditingSubscription(`${m._id}_${idx}`)}>Edit</button>
+                                      {/* <button className="btn-ghost" style={{ marginRight: 8 }} onClick={() => setEditingSubscription(`${m._id}_${idx}`)}>Edit</button> */}
                                       <button className="btn-ghost" onClick={async () => {
                                         if (!window.confirm('Delete this subscription?')) return
                                         try {

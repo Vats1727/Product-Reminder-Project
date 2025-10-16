@@ -36,35 +36,47 @@ export default function Dashboard() {
 
   // choose start date: prefer product.datePurchased, fallback to mapping.dateAssigned
   function getStartDate(mapping) {
-  // Always prefer mapping.dateAssigned if present, else fallback to product.datePurchased
-  if (mapping.dateAssigned) return new Date(mapping.dateAssigned)
-  const p = mapping.productId || {}
-  if (p.datePurchased) return new Date(p.datePurchased)
-  return null
+  const subs = mapping.subscriptions || []
+  if (subs.length) {
+    const latestSub = subs.reduce((latest, current) => {
+      const currentStart = new Date(current.datePurchased || current.dateAssigned)
+      const latestStart = latest ? new Date(latest.datePurchased || latest.dateAssigned) : null
+      return !latestStart || currentStart > latestStart ? current : latest
+    }, null)
+    return new Date(latestSub.datePurchased || latestSub.dateAssigned)
   }
+  const p = mapping.productId || {}
+  return mapping.dateAssigned ? new Date(mapping.dateAssigned) : (p.datePurchased ? new Date(p.datePurchased) : null)
+}
 
   function getExpiryDate(mapping) {
-    // Use latest subscription expiry if available
-    const subs = mapping.subscriptions || []
-    if (subs.length) return new Date(subs[subs.length - 1].expiresAt)
-    // Fallback to mapping/product logic
-    const start = getStartDate(mapping)
-    const p = mapping.productId || {}
-    if (!start || !p) return null
-    if ((mapping.type || p.type) === 'One-time') {
-      return new Date(start)
-    }
-    const count = Number(mapping.count ?? p.count ?? 1)
-    const period = (mapping.period || p.period || 'Months')
-    const expiry = new Date(start)
-    if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
-    else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
-    return expiry
+  const subs = mapping.subscriptions || []
+  if (subs.length) {
+    // Get the latest subscription expiry
+    const latestSub = subs.reduce((latest, current) => {
+      const currentExpiry = new Date(current.expiresAt)
+      const latestExpiry = latest ? new Date(latest.expiresAt) : null
+      return !latestExpiry || currentExpiry > latestExpiry ? current : latest
+    }, null)
+    return new Date(latestSub.expiresAt)
   }
 
-  function getDuePeriod(mapping) {
+  // fallback to mapping/product logic
+  const start = getStartDate(mapping)
+  const p = mapping.productId || {}
+  if (!start) return null
+  if ((mapping.type || p.type) === 'One-time') return new Date(start)
+  const count = Number(mapping.count ?? p.count ?? 1)
+  const period = mapping.period || p.period || 'Months'
+  const expiry = new Date(start)
+  if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
+  else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
+  return expiry
+}
+
+
+  function getDuePeriodFromExpiry(expiry) {
     const now = new Date()
-    const expiry = getExpiryDate(mapping)
     if (!expiry) return ''
     if (expiry < now) return 'Over-Due'
     let years = expiry.getFullYear() - now.getFullYear()
@@ -87,21 +99,26 @@ export default function Dashboard() {
     return 'th'
   }
 
-  function formatRemaining(mapping) {
-    const now = new Date()
-    const expiry = getExpiryDate(mapping)
-    if (!expiry) return ''
-    if (expiry < now) return 'Over-Due'
-    let years = expiry.getFullYear() - now.getFullYear()
-    let months = expiry.getMonth() - now.getMonth()
-    let days = expiry.getDate() - now.getDate()
-    if (days < 0) { const prevMonth = new Date(expiry.getFullYear(), expiry.getMonth(), 0); days += prevMonth.getDate(); months -= 1 }
-    if (months < 0) { months += 12; years -= 1 }
+  function formatDuePeriod(purchase, expiry) {
+    if (!purchase || !expiry) return ''
+    const start = new Date(purchase)
+    const end = new Date(expiry)
+    if (end < start) return 'Over-Due'
+    // Calculate total months and days difference
+    let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
+    let days = end.getDate() - start.getDate()
+    if (days < 0) {
+      totalMonths -= 1
+      const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0)
+      days += prevMonth.getDate()
+    }
+    let years = Math.floor(totalMonths / 12)
+    let months = totalMonths % 12
     const parts = []
     if (years > 0) parts.push(`${years} yr${years > 1 ? 's' : ''}`)
     if (months > 0) parts.push(`${months} mo${months > 1 ? 's' : ''}`)
     if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
-    return parts.length ? parts.join(', ') : 'Today'
+    return parts.length ? parts.join(', ') : '-'
   }
 
   function getDuePeriodValue(mapping) {
@@ -216,14 +233,16 @@ export default function Dashboard() {
                   const p = m.productId || {}
                   const subs = m.subscriptions || []
                   const latest = subs.length ? subs[subs.length - 1] : null
+                  const expiry = latest ? new Date(latest.expiresAt) : getExpiryDate(m)
+                  const purchase = latest ? latest.datePaid : (p.datePurchased || m.dateAssigned)
                   return (
                     <tr key={m._id}>
                       <td>{(currentPage - 1) * pageSize + i + 1}</td>
                       <td>{m.customerId?.name}</td>
                       <td>{p.productName}</td>
-                      <td>{latest ? formatDate(latest.datePaid) : formatDate(p.datePurchased || m.dateAssigned)}</td>
-                      <td>{latest ? formatDate(latest.expiresAt) : formatDate(getExpiryDate(m))}</td>
-                      <td>{formatRemaining(m)}</td>
+                      <td>{formatDate(purchase)}</td>
+                      <td>{formatDate(expiry)}</td>
+                      <td>{formatDuePeriod(purchase, expiry)}</td>
                       <td>
                         {latest ? (
                           <span>
