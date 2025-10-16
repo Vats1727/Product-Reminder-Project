@@ -99,14 +99,14 @@ export default function Dashboard() {
     return 'th'
   }
 
-  function formatDuePeriod(purchase, expiry) {
-    if (!purchase || !expiry) return ''
-    const start = new Date(purchase)
+  function formatDuePeriod(_purchase, expiry) {
+    if (!expiry) return ''
+    const now = new Date()
     const end = new Date(expiry)
-    if (end < start) return 'Expired'
-    // Calculate total months and days difference
-    let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
-    let days = end.getDate() - start.getDate()
+    if (end < now) return 'Expired'
+    // Calculate total months and days difference from now to expiry
+    let totalMonths = (end.getFullYear() - now.getFullYear()) * 12 + (end.getMonth() - now.getMonth())
+    let days = end.getDate() - now.getDate()
     if (days < 0) {
       totalMonths -= 1
       const prevMonth = new Date(end.getFullYear(), end.getMonth(), 0)
@@ -118,7 +118,7 @@ export default function Dashboard() {
     if (years > 0) parts.push(`${years} yr${years > 1 ? 's' : ''}`)
     if (months > 0) parts.push(`${months} mo${months > 1 ? 's' : ''}`)
     if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
-    return parts.length ? parts.join(', ') : 'Overdue'
+    return parts.length ? parts.join(', ') : 'Due today'
   }
 
   function getDuePeriodValue(mapping) {
