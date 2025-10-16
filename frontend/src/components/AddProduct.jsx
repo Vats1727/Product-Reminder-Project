@@ -324,7 +324,7 @@ export default function AddProduct() {
                   <tr key={p.id}>
                     <td>{(currentPage - 1) * pageSize + index + 1}</td>
                     <td>{p.productName}</td>
-                    <td>${p.amount}</td>
+                    <td>Rs.{p.amount}</td>
                     <td>{p.type}{p.type === 'Recurring' ? ` (${p.count} ${p.period})` : ''}</td>
                     <td>{p.source}</td>
                     <td>

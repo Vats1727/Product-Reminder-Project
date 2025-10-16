@@ -38,6 +38,15 @@ const customerProductMapSchema = new mongoose.Schema({
     type: String,
     enum: ['Days', 'Months', 'Years']
   }
+  ,
+  subscriptions: [{
+    amount: { type: Number },
+    units: { type: Number },
+    unitType: { type: String, enum: ['Days', 'Months', 'Years'], default: 'Months' },
+    datePaid: { type: Date, default: Date.now },
+    expiresAt: { type: Date },
+    ordinal: { type: Number }
+  }]
 })
 
 module.exports = mongoose.model('CustomerProductMap', customerProductMapSchema)

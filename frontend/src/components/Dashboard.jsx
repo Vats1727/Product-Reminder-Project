@@ -15,6 +15,12 @@ export default function Dashboard() {
   const [duePeriodFilter, setDuePeriodFilter] = useState('')
 
   useEffect(() => { loadMappings() }, [])
+    useEffect(() => {
+      loadMappings()
+      const handler = () => loadMappings()
+      window.addEventListener('mappingChanged', handler)
+      return () => window.removeEventListener('mappingChanged', handler)
+    }, [])
 
   async function loadMappings() {
     try {
@@ -30,28 +36,28 @@ export default function Dashboard() {
 
   // choose start date: prefer product.datePurchased, fallback to mapping.dateAssigned
   function getStartDate(mapping) {
-    const p = mapping.productId || {}
-    if (p.datePurchased) return new Date(p.datePurchased)
-    if (mapping.dateAssigned) return new Date(mapping.dateAssigned)
-    return null
+  // Always prefer mapping.dateAssigned if present, else fallback to product.datePurchased
+  if (mapping.dateAssigned) return new Date(mapping.dateAssigned)
+  const p = mapping.productId || {}
+  if (p.datePurchased) return new Date(p.datePurchased)
+  return null
   }
 
   function getExpiryDate(mapping) {
+    // Use latest subscription expiry if available
+    const subs = mapping.subscriptions || []
+    if (subs.length) return new Date(subs[subs.length - 1].expiresAt)
+    // Fallback to mapping/product logic
     const start = getStartDate(mapping)
     const p = mapping.productId || {}
     if (!start || !p) return null
-
     if ((mapping.type || p.type) === 'One-time') {
-      // For one-time, expiry is the start/purchase date
       return new Date(start)
     }
-
-    // Recurring: add count * period to start
     const count = Number(mapping.count ?? p.count ?? 1)
     const period = (mapping.period || p.period || 'Months')
     const expiry = new Date(start)
-    if (period === 'Days') expiry.setDate(expiry.getDate() + count)
-    else if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
+    if (period === 'Months') expiry.setMonth(expiry.getMonth() + count)
     else if (period === 'Years') expiry.setFullYear(expiry.getFullYear() + count)
     return expiry
   }
@@ -70,6 +76,15 @@ export default function Dashboard() {
     if (months > 0) return 'Months'
     if (days > 0) return 'Days'
     return 'Today'
+  }
+
+  function getOrdinalSuffix(n) {
+    if (!n && n !== 0) return ''
+    const j = n % 10, k = n % 100
+    if (j === 1 && k !== 11) return 'st'
+    if (j === 2 && k !== 12) return 'nd'
+    if (j === 3 && k !== 13) return 'rd'
+    return 'th'
   }
 
   function formatRemaining(mapping) {
@@ -169,18 +184,6 @@ export default function Dashboard() {
     <div className="page-content">
       <div className="page-header"><h2>Dashboard</h2></div>
       <section>
-        {/* <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 16 }}>
-          <label>Due Period
-            <select value={duePeriodFilter} onChange={e => { setDuePeriodFilter(e.target.value); setCurrentPage(1) }}>
-              <option value="">All</option>
-              <option value="Days">Days</option>
-              <option value="Months">Months</option>
-              <option value="Years">Years</option>
-              <option value="Today">Today</option>
-              <option value="Expired">Expired</option>
-            </select>
-          </label>
-        </div> */}
         <TableControls
           searchQuery={searchQuery}
           onSearchChange={handleSearch}
@@ -196,7 +199,7 @@ export default function Dashboard() {
           <table className="table">
             <thead>
               <tr className="table-header-row">
-                <th>#</th>
+                <th>No.</th>
                 <th>Customer</th>
                 <th>Product</th>
                 <th>Purchase</th>
@@ -211,15 +214,27 @@ export default function Dashboard() {
               ) : (
                 paginatedMappings.map((m, i) => {
                   const p = m.productId || {}
+                  const subs = m.subscriptions || []
+                  const latest = subs.length ? subs[subs.length - 1] : null
                   return (
                     <tr key={m._id}>
                       <td>{(currentPage - 1) * pageSize + i + 1}</td>
                       <td>{m.customerId?.name}</td>
                       <td>{p.productName}</td>
-                      <td>{formatDate(p.datePurchased || m.dateAssigned)}</td>
-                      <td>{formatDate(getExpiryDate(m))}</td>
+                      <td>{latest ? formatDate(latest.datePaid) : formatDate(p.datePurchased || m.dateAssigned)}</td>
+                      <td>{latest ? formatDate(latest.expiresAt) : formatDate(getExpiryDate(m))}</td>
                       <td>{formatRemaining(m)}</td>
-                      <td>Amount: ${m.amount || p.amount} | Type: {m.type || p.type} | Source: {m.source || p.source}</td>
+                      <td>
+                        {latest ? (
+                          <span>
+                            <strong>{latest.ordinal}{getOrdinalSuffix(latest.ordinal)} subscription</strong><br/>
+                            Paid: Rs.{latest.unitType === 'Years' ? latest.units * 12 * (m.amount || p.amount || 0) : latest.units * (m.amount || p.amount || 0)} for {latest.units} {latest.unitType}<br/>
+                            Type: {m.type || p.type} | Source: {m.source || p.source}
+                          </span>
+                        ) : (
+                          <>Amount: Rs.{m.amount || p.amount} | Type: {m.type || p.type} | Source: {m.source || p.source}</>
+                        )}
+                      </td>
                     </tr>
                   )
                 })

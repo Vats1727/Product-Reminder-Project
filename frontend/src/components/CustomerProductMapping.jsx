@@ -1,3 +1,4 @@
+  // State for editing subscription index in history
 import React, { useEffect, useState, useMemo } from 'react'
 import TableControls from './TableControls'
 import './table-controls.css'
@@ -9,6 +10,7 @@ export default function CustomerProductMapping() {
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [mappings, setMappings] = useState([])
+  const [editingSubscription, setEditingSubscription] = useState(null)
   const [form, setForm] = useState({
     customerId: '',
     productId: '',
@@ -30,6 +32,11 @@ export default function CustomerProductMapping() {
   const [sortOrder, setSortOrder] = useState('asc')
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
+
+  // Subscription/payments state
+  const [payMonths, setPayMonths] = useState({})
+  const [payUnitType, setPayUnitType] = useState({})
+  const [showHistory, setShowHistory] = useState({})
 
   const sortOptions = [
     { value: 'customer', label: 'Customer' },
@@ -75,6 +82,15 @@ export default function CustomerProductMapping() {
     const mm = String(dt.getMonth() + 1).padStart(2, '0')
     const yyyy = dt.getFullYear()
     return `${dd}-${mm}-${yyyy}`
+  }
+
+  function getOrdinalSuffix(n) {
+    if (!n && n !== 0) return ''
+    const j = n % 10, k = n % 100
+    if (j === 1 && k !== 11) return 'st'
+    if (j === 2 && k !== 12) return 'nd'
+    if (j === 3 && k !== 13) return 'rd'
+    return 'th'
   }
 
   function toInputDateValue(d) {
@@ -143,6 +159,7 @@ export default function CustomerProductMapping() {
         setMappings([newMapping, ...mappings])
   setForm({ customerId: '', productId: '', remarks: '', dateAssigned: '' })
         toast.success('Mapping created successfully')
+          window.dispatchEvent(new Event('mappingChanged'))
       } else {
         const error = await res.text()
         throw new Error(error)
@@ -180,6 +197,7 @@ export default function CustomerProductMapping() {
           m._id === mappingId ? updatedMapping : m
         ))
         toast.success('Remarks updated')
+          window.dispatchEvent(new Event('mappingChanged'))
       } else {
         throw new Error('Failed to update remarks')
       }
@@ -297,6 +315,7 @@ export default function CustomerProductMapping() {
                 <th>Customer</th>
                 <th>Product</th>
                 <th>Product Details</th>
+                <th>Subscription</th>
                 <th>Remarks</th>
                 <th>Actions</th>
               </tr>
@@ -304,7 +323,7 @@ export default function CustomerProductMapping() {
             <tbody>
               {paginatedMappings.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="empty-row">No mappings found</td>
+                  <td colSpan={7} className="empty-row">No mappings found</td>
                 </tr>
               ) : (
                 paginatedMappings.map((m, index) => (
@@ -316,7 +335,7 @@ export default function CustomerProductMapping() {
                       {editingProductDetails === m._id ? (
                         <div className="edit-product-details">
                           <div>
-                            <label>Amount: $
+                            <label>Amount: Rs.
                               <input
                                 type="number"
                                 value={m.amount || m.productId?.amount}
@@ -442,7 +461,7 @@ export default function CustomerProductMapping() {
                         </div>
                       ) : (
                         <div>
-                          <div>Amount: ${m.amount || m.productId?.amount}</div>
+                          <div>Amount: Rs.{m.amount || m.productId?.amount}</div>
                           <div>Type: {m.type || m.productId?.type}</div>
                           <div>Source: {m.source || m.productId?.source}</div>
                           {(m.type || m.productId?.type) === 'Recurring' && (
@@ -455,6 +474,163 @@ export default function CustomerProductMapping() {
                           >
                             Edit Details
                           </button>
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      {/* Subscription cell */}
+                      {m.subscriptions && m.subscriptions.length ? (
+                        (() => {
+                          const last = m.subscriptions[m.subscriptions.length - 1]
+                          return (
+                            <div>
+                              <div style={{ fontSize: 13 }}><strong>{last.ordinal}{getOrdinalSuffix(last.ordinal)} subscription</strong></div>
+                              <div style={{ fontSize: 12, color: '#333' }}>Paid: {last.amount || (m.amount || m.productId?.amount)} for {last.months} mo</div>
+                              <div style={{ fontSize: 12, color: '#666' }}>Expires: {last.expiresAt ? formatDateDDMMYYYY(last.expiresAt) : ''}</div>
+                            </div>
+                          )
+                        })()
+                      ) : (
+                        <div style={{ fontSize: 12, color: '#666' }}>No subscriptions</div>
+                      )}
+
+                      <div style={{ marginTop: 8 }}>
+                        <label style={{ fontSize: 12 }}>Units
+                          <input type="number" value={payMonths[m._id] || 0} onChange={e => setPayMonths(prev => ({ ...prev, [m._id]: Number(e.target.value) }))} style={{ width: 60, marginLeft: 8 }} />
+                        </label>
+                        <label style={{ fontSize: 12, marginLeft: 8 }}>Unit type
+                          <select value={payUnitType[m._id] || 'Months'} onChange={e => setPayUnitType(prev => ({ ...prev, [m._id]: e.target.value }))} style={{ marginLeft: 8 }}>
+                            <option>Months</option>
+                            <option>Years</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div style={{ marginTop: 6 }}>
+                        <button className="btn-primary" 
+                          disabled={Number(payMonths[m._id] || 0) <= 0 || Number(m.amount || m.productId?.amount || 0) <= 0}
+                          onClick={async () => {
+                          const units = Number(payMonths[m._id] || 0)
+                          const unitType = payUnitType[m._id] || 'Months'
+                          const perUnit = Number(m.amount || m.productId?.amount || 0)
+                          const total = units * perUnit
+                          if (!perUnit || perUnit <= 0) { toast.error('Invalid product amount'); return }
+                          if (units <= 0) { toast.error('Units must be greater than 0'); return }
+                          if (!window.confirm(`Record payment of Rs.${total} for ${units} ${unitType}(s)?`)) return
+                          try {
+                            const res = await fetch(`${API}/api/mappings/${m._id}/pay`, {
+                              method: 'POST', headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ units, unitType, amount: total })
+                            })
+                            if (res.ok) {
+                              const updated = await res.json()
+                              setMappings(prev => prev.map(x => x._id === updated._id ? updated : x))
+                              window.dispatchEvent(new Event('mappingChanged'))
+                              toast.success('Payment recorded')
+                            } else {
+                              const err = await res.text()
+                              throw new Error(err || 'Payment failed')
+                            }
+                          } catch (err) {
+                            console.error('Payment error', err)
+                            toast.error(err.message || 'Failed to record payment')
+                          }
+                        }}>Pay</button>
+                        <span style={{ marginLeft: 8, fontSize: 13 }}>
+                          Total: Rs.{
+                            (() => {
+                              const units = Number(payMonths[m._id] || 0)
+                              const perUnit = Number(m.amount || m.productId?.amount || 0)
+                              const unitType = payUnitType[m._id] || 'Months'
+                              if (unitType === 'Years') return (units * 12 * perUnit).toFixed(2)
+                              return (units * perUnit).toFixed(2)
+                            })()
+                          }
+                        </span>
+
+                        <button className="btn-ghost" style={{ marginLeft: 8 }} onClick={() => setShowHistory(prev => ({ ...prev, [m._id]: !prev[m._id] }))}>
+                          {showHistory[m._id] ? 'Hide History' : `History (${(m.subscriptions||[]).length})`}
+                        </button>
+                      </div>
+
+                      {showHistory[m._id] && (
+                        <div style={{ marginTop: 8, fontSize: 13 }}>
+                          {(m.subscriptions || []).map((s, idx) => {
+                            const isEditing = editingSubscription === `${m._id}_${idx}`;
+                            const perUnit = Number(m.amount || m.productId?.amount || 0);
+                            const calcAmount = s.unitType === 'Years' ? s.units * 12 * perUnit : s.units * perUnit;
+                            return (
+                              <div key={idx} style={{ padding: '6px 0', borderBottom: '1px dashed #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <div>
+                                  <strong>{s.ordinal}{getOrdinalSuffix(s.ordinal)}:</strong> Rs.{calcAmount} for {s.units} {s.unitType}
+                                  <div style={{ color: '#666' }}>Paid: {formatDateDDMMYYYY(s.datePaid)} — Expires: {formatDateDDMMYYYY(s.expiresAt)}</div>
+                                </div>
+                                <div>
+                                  {isEditing ? (
+                                    <span>
+                                      <input type="number" min={1} defaultValue={s.units} id={`edit-units-${m._id}-${idx}`} style={{ width: 50 }} />
+                                      <select defaultValue={s.unitType} id={`edit-unitType-${m._id}-${idx}`} style={{ marginLeft: 8 }}>
+                                        <option>Months</option>
+                                        <option>Years</option>
+                                      </select>
+                                      <span style={{ marginLeft: 8, fontSize: 13 }}>
+                                        Total: Rs.{(() => {
+                                          const units = Number(document.getElementById(`edit-units-${m._id}-${idx}`)?.value || s.units);
+                                          const unitType = document.getElementById(`edit-unitType-${m._id}-${idx}`)?.value || s.unitType;
+                                          if (unitType === 'Years') return (units * 12 * perUnit).toFixed(2);
+                                          return (units * perUnit).toFixed(2);
+                                        })()}
+                                      </span>
+                                      <button className="btn-primary" style={{ marginLeft: 8 }} onClick={async () => {
+                                        const units = Number(document.getElementById(`edit-units-${m._id}-${idx}`)?.value || s.units);
+                                        const unitType = document.getElementById(`edit-unitType-${m._id}-${idx}`)?.value || s.unitType;
+                                        const amount = unitType === 'Years' ? units * 12 * perUnit : units * perUnit;
+                                        try {
+                                          const res = await fetch(`${API}/api/mappings/${m._id}/subscription/${idx}`, {
+                                            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ units, unitType, amount })
+                                          })
+                                          if (res.ok) {
+                                            const updated = await res.json()
+                                            setMappings(prev => prev.map(x => x._id === updated._id ? updated : x))
+                                            window.dispatchEvent(new Event('mappingChanged'))
+                                            toast.success('Subscription updated')
+                                            setEditingSubscription(null)
+                                          } else {
+                                            throw new Error('Failed to update subscription')
+                                          }
+                                        } catch (err) {
+                                          toast.error('Failed to update subscription')
+                                        }
+                                      }}>Save</button>
+                                      <button className="btn-ghost" style={{ marginLeft: 8 }} onClick={() => setEditingSubscription(null)}>Cancel</button>
+                                    </span>
+                                  ) : (
+                                    <>
+                                      <button className="btn-ghost" style={{ marginRight: 8 }} onClick={() => setEditingSubscription(`${m._id}_${idx}`)}>Edit</button>
+                                      <button className="btn-ghost" onClick={async () => {
+                                        if (!window.confirm('Delete this subscription?')) return
+                                        try {
+                                          const res = await fetch(`${API}/api/mappings/${m._id}/subscription/${idx}`, {
+                                            method: 'DELETE'
+                                          })
+                                          if (res.ok) {
+                                            const updated = await res.json()
+                                            setMappings(prev => prev.map(x => x._id === updated._id ? updated : x))
+                                            window.dispatchEvent(new Event('mappingChanged'))
+                                            toast.success('Subscription deleted')
+                                          } else {
+                                            throw new Error('Failed to delete subscription')
+                                          }
+                                        } catch (err) {
+                                          toast.error('Failed to delete subscription')
+                                        }
+                                      }}>Delete</button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </td>

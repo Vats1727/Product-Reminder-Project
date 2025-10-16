@@ -172,9 +172,6 @@
   transition: background-color 0.2s;
 }
 
-.btn-action:hover {
-  background: #114d3a;
-}
 
 /* Table */
 .table {
@@ -253,6 +250,4 @@
   flex-shrink: 0;
 }
 
-.btn-primary:hover {
-  background: #000000;
-}
+

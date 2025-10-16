@@ -4,6 +4,67 @@ const CustomerProductMap = require('../models/CustomerProductMap')
 const Customer = require('../models/Customer')
 const Product = require('../models/Product')
 
+// Edit a subscription entry in a mapping
+router.put('/:id/subscription/:subIdx', async (req, res) => {
+  try {
+    const mapping = await CustomerProductMap.findById(req.params.id)
+    if (!mapping) return res.status(404).json({ error: 'Mapping not found' })
+    const idx = Number(req.params.subIdx)
+    if (!mapping.subscriptions || idx < 0 || idx >= mapping.subscriptions.length) return res.status(404).json({ error: 'Subscription not found' })
+    const { amount, units, unitType } = req.body
+    if (amount !== undefined) mapping.subscriptions[idx].amount = amount
+    if (units !== undefined) mapping.subscriptions[idx].units = units
+    if (unitType !== undefined) mapping.subscriptions[idx].unitType = unitType
+    // Recalculate expiry if units/unitType changed
+    if (units !== undefined || unitType !== undefined) {
+      let start = idx === 0 ? (mapping.dateAssigned ? new Date(mapping.dateAssigned) : new Date()) : new Date(mapping.subscriptions[idx-1].expiresAt)
+      let expiresAt = new Date(start)
+      const n = Number(mapping.subscriptions[idx].units) || 0
+      if (mapping.subscriptions[idx].unitType === 'Days') expiresAt.setDate(expiresAt.getDate() + n)
+      else if (mapping.subscriptions[idx].unitType === 'Months') expiresAt.setMonth(expiresAt.getMonth() + n)
+      else if (mapping.subscriptions[idx].unitType === 'Years') expiresAt.setFullYear(expiresAt.getFullYear() + n)
+      mapping.subscriptions[idx].datePaid = start
+      mapping.subscriptions[idx].expiresAt = expiresAt
+    }
+    await mapping.save()
+    const populated = await CustomerProductMap.findById(mapping._id).populate('customerId').populate('productId')
+    res.json(populated)
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// Delete a subscription entry in a mapping
+router.delete('/:id/subscription/:subIdx', async (req, res) => {
+  try {
+    const mapping = await CustomerProductMap.findById(req.params.id)
+    if (!mapping) return res.status(404).json({ error: 'Mapping not found' })
+    const idx = Number(req.params.subIdx)
+    if (!mapping.subscriptions || idx < 0 || idx >= mapping.subscriptions.length) return res.status(404).json({ error: 'Subscription not found' })
+    mapping.subscriptions.splice(idx, 1)
+    // Recalculate ordinals and expiry dates for all subscriptions
+    for (let i = 0; i < mapping.subscriptions.length; ++i) {
+      mapping.subscriptions[i].ordinal = i + 1
+      let start = i === 0 ? (mapping.dateAssigned ? new Date(mapping.dateAssigned) : new Date()) : new Date(mapping.subscriptions[i-1].expiresAt)
+      let expiresAt = new Date(start)
+      const n = Number(mapping.subscriptions[i].units) || 0
+      if (mapping.subscriptions[i].unitType === 'Days') expiresAt.setDate(expiresAt.getDate() + n)
+      else if (mapping.subscriptions[i].unitType === 'Months') expiresAt.setMonth(expiresAt.getMonth() + n)
+      else if (mapping.subscriptions[i].unitType === 'Years') expiresAt.setFullYear(expiresAt.getFullYear() + n)
+      mapping.subscriptions[i].datePaid = start
+      mapping.subscriptions[i].expiresAt = expiresAt
+    }
+    await mapping.save()
+    const populated = await CustomerProductMap.findById(mapping._id).populate('customerId').populate('productId')
+    res.json(populated)
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: err.message })
+  }
+})
+
+
 // Get all mappings with customer and product details
 router.get('/', async (req, res) => {
   try {
@@ -75,6 +136,46 @@ router.put('/:id', async (req, res) => {
       .populate('productId')
     
     res.json(populatedMapping)
+  } catch (err) {
+    console.error(err)
+    res.status(400).json({ error: err.message })
+  }
+})
+
+// Record a payment / subscription for a mapping
+router.post('/:id/pay', async (req, res) => {
+  try {
+    const { units = 1, unitType = 'Months', amount } = req.body
+    const mapping = await CustomerProductMap.findById(req.params.id)
+    if (!mapping) return res.status(404).json({ error: 'Mapping not found' })
+    if (!amount || amount <= 0) return res.status(400).json({ error: 'Subscription amount must be greater than 0' })
+
+    // Determine ordinal
+    const ordinal = (mapping.subscriptions?.length || 0) + 1
+
+    // Compute purchase/expiry dates
+    let lastExpiry = mapping.subscriptions && mapping.subscriptions.length ? mapping.subscriptions[mapping.subscriptions.length - 1].expiresAt : null
+    let purchaseDate = lastExpiry ? new Date(lastExpiry) : (mapping.dateAssigned ? new Date(mapping.dateAssigned) : new Date())
+    if (!purchaseDate) purchaseDate = new Date()
+    const expiresAt = new Date(purchaseDate)
+
+    // Add units based on unitType
+    const n = Number(units) || 0
+    if (unitType === 'Days') {
+      expiresAt.setDate(expiresAt.getDate() + n)
+    } else if (unitType === 'Months') {
+      expiresAt.setMonth(expiresAt.getMonth() + n)
+    } else if (unitType === 'Years') {
+      expiresAt.setFullYear(expiresAt.getFullYear() + n)
+    }
+
+    const sub = { amount, units: Number(units), unitType, datePaid: purchaseDate, expiresAt, ordinal }
+    mapping.subscriptions = mapping.subscriptions || []
+    mapping.subscriptions.push(sub)
+    await mapping.save()
+
+    const populated = await CustomerProductMap.findById(mapping._id).populate('customerId').populate('productId')
+    res.json(populated)
   } catch (err) {
     console.error(err)
     res.status(400).json({ error: err.message })
