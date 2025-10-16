@@ -78,7 +78,7 @@ export default function Dashboard() {
   function getDuePeriodFromExpiry(expiry) {
     const now = new Date()
     if (!expiry) return ''
-    if (expiry < now) return 'Over-Due'
+    if (expiry < now) return 'Expired'
     let years = expiry.getFullYear() - now.getFullYear()
     let months = expiry.getMonth() - now.getMonth()
     let days = expiry.getDate() - now.getDate()
@@ -103,7 +103,7 @@ export default function Dashboard() {
     if (!purchase || !expiry) return ''
     const start = new Date(purchase)
     const end = new Date(expiry)
-    if (end < start) return 'Over-Due'
+    if (end < start) return 'Expired'
     // Calculate total months and days difference
     let totalMonths = (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth())
     let days = end.getDate() - start.getDate()
@@ -118,14 +118,14 @@ export default function Dashboard() {
     if (years > 0) parts.push(`${years} yr${years > 1 ? 's' : ''}`)
     if (months > 0) parts.push(`${months} mo${months > 1 ? 's' : ''}`)
     if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`)
-    return parts.length ? parts.join(', ') : '-'
+    return parts.length ? parts.join(', ') : 'Overdue'
   }
 
   function getDuePeriodValue(mapping) {
     const now = new Date()
     const expiry = getExpiryDate(mapping)
     if (!expiry) return Infinity
-    if (expiry < now) return -1 // Over-Due
+    if (expiry < now) return -1 // Expired
     return expiry.getTime() - now.getTime()
   }
 

@@ -608,21 +608,31 @@ export default function CustomerProductMapping() {
                                     <>
                                       {/* <button className="btn-ghost" style={{ marginRight: 8 }} onClick={() => setEditingSubscription(`${m._id}_${idx}`)}>Edit</button> */}
                                       <button className="btn-ghost" onClick={async () => {
-                                        if (!window.confirm('Delete this subscription?')) return
-                                        try {
-                                          const res = await fetch(`${API}/api/mappings/${m._id}/subscription/${idx}`, {
-                                            method: 'DELETE'
-                                          })
-                                          if (res.ok) {
-                                            const updated = await res.json()
-                                            setMappings(prev => prev.map(x => x._id === updated._id ? updated : x))
-                                            window.dispatchEvent(new Event('mappingChanged'))
-                                            toast.success('Subscription deleted')
-                                          } else {
-                                            throw new Error('Failed to delete subscription')
+                                        const today = new Date();
+                                        const paidDate = new Date(s.datePaid);
+                                        const expiryDate = new Date(s.expiresAt);
+                                        if (today < paidDate) {
+                                          // allow delete
+                                          if (!window.confirm('Delete this future subscription?')) return;
+                                          try {
+                                            const res = await fetch(`${API}/api/mappings/${m._id}/subscription/${idx}`, {
+                                              method: 'DELETE'
+                                            })
+                                            if (res.ok) {
+                                              const updated = await res.json()
+                                              setMappings(prev => prev.map(x => x._id === updated._id ? updated : x))
+                                              window.dispatchEvent(new Event('mappingChanged'))
+                                              toast.success('Subscription deleted')
+                                            } else {
+                                              throw new Error('Failed to delete subscription')
+                                            }
+                                          } catch (err) {
+                                            toast.error('Failed to delete subscription')
                                           }
-                                        } catch (err) {
-                                          toast.error('Failed to delete subscription')
+                                        } else if (today >= paidDate && today <= expiryDate) {
+                                          toast.error("Active subscription can't be deleted")
+                                        } else if (today > expiryDate) {
+                                          toast.error("Past subscription can't be deleted")
                                         }
                                       }}>Delete</button>
                                     </>

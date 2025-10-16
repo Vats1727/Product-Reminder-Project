@@ -145,7 +145,7 @@ router.put('/:id', async (req, res) => {
 // Record a payment / subscription for a mapping
 router.post('/:id/pay', async (req, res) => {
   try {
-    const { units = 1, unitType = 'Months', amount } = req.body
+    const { units = 1, unitType = 'Months', amount, datePaid } = req.body
     const mapping = await CustomerProductMap.findById(req.params.id)
     if (!mapping) return res.status(404).json({ error: 'Mapping not found' })
     if (!amount || amount <= 0) return res.status(400).json({ error: 'Subscription amount must be greater than 0' })
@@ -154,9 +154,20 @@ router.post('/:id/pay', async (req, res) => {
     const ordinal = (mapping.subscriptions?.length || 0) + 1
 
     // Compute purchase/expiry dates
-    let lastExpiry = mapping.subscriptions && mapping.subscriptions.length ? mapping.subscriptions[mapping.subscriptions.length - 1].expiresAt : null
-    let purchaseDate = lastExpiry ? new Date(lastExpiry) : (mapping.dateAssigned ? new Date(mapping.dateAssigned) : new Date())
-    if (!purchaseDate) purchaseDate = new Date()
+    // If this is the first subscription or there is a gap, use provided datePaid or today
+    let purchaseDate = datePaid ? new Date(datePaid) : new Date()
+    if (mapping.subscriptions && mapping.subscriptions.length) {
+      const lastExpiry = new Date(mapping.subscriptions[mapping.subscriptions.length - 1].expiresAt)
+      // If new purchaseDate is after lastExpiry, treat as fresh cycle (gap)
+      // If new purchaseDate is before or equal to lastExpiry, chain from last expiry
+      if (purchaseDate.getTime() <= lastExpiry.getTime()) {
+        purchaseDate = new Date(lastExpiry)
+      }
+      // else, use purchaseDate as selected (gap)
+    } else {
+      // First subscription, use mapping.dateAssigned or today
+      purchaseDate = mapping.dateAssigned ? new Date(mapping.dateAssigned) : purchaseDate
+    }
     const expiresAt = new Date(purchaseDate)
 
     // Add units based on unitType
