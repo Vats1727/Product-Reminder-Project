@@ -66,7 +66,7 @@ export default function Dashboard() {
     const now = new Date()
     const expiry = getExpiryDate(mapping)
     if (!expiry) return ''
-    if (expiry < now) return 'Expired'
+    if (expiry < now) return 'Over-Due'
     let years = expiry.getFullYear() - now.getFullYear()
     let months = expiry.getMonth() - now.getMonth()
     let days = expiry.getDate() - now.getDate()
@@ -75,7 +75,7 @@ export default function Dashboard() {
     if (years > 0) return 'Years'
     if (months > 0) return 'Months'
     if (days > 0) return 'Days'
-    return 'Today'
+    return '-'
   }
 
   function getOrdinalSuffix(n) {
@@ -91,7 +91,7 @@ export default function Dashboard() {
     const now = new Date()
     const expiry = getExpiryDate(mapping)
     if (!expiry) return ''
-    if (expiry < now) return 'Expired'
+    if (expiry < now) return 'Over-Due'
     let years = expiry.getFullYear() - now.getFullYear()
     let months = expiry.getMonth() - now.getMonth()
     let days = expiry.getDate() - now.getDate()
@@ -108,7 +108,7 @@ export default function Dashboard() {
     const now = new Date()
     const expiry = getExpiryDate(mapping)
     if (!expiry) return Infinity
-    if (expiry < now) return -1 // Expired
+    if (expiry < now) return -1 // Over-Due
     return expiry.getTime() - now.getTime()
   }
 
